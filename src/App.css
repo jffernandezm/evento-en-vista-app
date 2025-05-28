@@ -1,8 +1,11 @@
+
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  /* max-width: 1280px; // Removed for full screen
+  margin: 0 auto; // Removed for full screen
+  padding: 2rem; // Removed for full screen */
   text-align: center;
+  width: 100%;
+  height: 100%;
 }
 
 .logo {
