@@ -14,7 +14,9 @@ export const mockEvents: EventType[] = [
     images: [
       'https://source.unsplash.com/random/800x600?jazz,music,event',
       'https://source.unsplash.com/random/800x600?park,people,festival',
-      'https://source.unsplash.com/random/800x600?food,truck,event'
+      'https://source.unsplash.com/random/800x600?food,truck,event',
+      'https://source.unsplash.com/random/800x600?saxophone,stage,music', // Nueva imagen
+      'https://source.unsplash.com/random/800x600?crowd,concert,night,lights' // Nueva imagen
     ],
     address: 'Parque Metropolitano, Santiago',
     contactInfo: 'info@festivaldejazz.cl / +56987654321',
@@ -34,9 +36,11 @@ export const mockEvents: EventType[] = [
     price: '$5.000 CLP',
     imageUrl: 'https://source.unsplash.com/random/400x300?art,gallery',
     images: [
-        'https://source.unsplash.com/random/800x600?art,exhibition',
-        'https://source.unsplash.com/random/800x600?modern,art',
-        'https://source.unsplash.com/random/800x600?gallery,people'
+        'https://source.unsplash.com/random/800x600?art,exhibition,gallery',
+        'https://source.unsplash.com/random/800x600?modern,art,painting',
+        'https://source.unsplash.com/random/800x600?gallery,people,museum',
+        'https://source.unsplash.com/random/800x600?sculpture,art,modern', // Nueva imagen
+        'https://source.unsplash.com/random/800x600?abstract,art,canvas' // Nueva imagen
     ],
     address: 'Centro Cultural GAM, Santiago',
     contactInfo: 'contacto@expoarte.com',
@@ -52,9 +56,11 @@ export const mockEvents: EventType[] = [
     price: '$15.000 CLP (Incluye transporte)',
     imageUrl: 'https://source.unsplash.com/random/400x300?astronomy,night,sky',
     images: [
-        'https://source.unsplash.com/random/800x600?stars,telescope',
-        'https://source.unsplash.com/random/800x600?milky,way',
-        'https://source.unsplash.com/random/800x600?mountain,night'
+        'https://source.unsplash.com/random/800x600?stars,telescope,night',
+        'https://source.unsplash.com/random/800x600?milky,way,galaxy',
+        'https://source.unsplash.com/random/800x600?mountain,night,sky,stars',
+        'https://source.unsplash.com/random/800x600?moon,crater,space', // Nueva imagen
+        'https://source.unsplash.com/random/800x600?nebula,cosmos,astronomy' // Nueva imagen
     ],
     address: 'Observatorio Cerro Calán',
     contactInfo: 'reservas@observacionastronomica.cl',
