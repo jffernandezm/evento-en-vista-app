@@ -8,8 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Calendar, MapPin, DollarSign, Image, Phone } from 'lucide-react';
+import { ArrowLeft, DollarSign, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import DateRangePicker from '@/components/DateRangePicker';
+import ImageUploader from '@/components/ImageUploader';
+import LocationPicker from '@/components/LocationPicker';
+import { format } from 'date-fns';
 
 const CreateEventPage: React.FC = () => {
   const { user } = useAuth();
@@ -21,7 +25,6 @@ const CreateEventPage: React.FC = () => {
     title: '',
     shortDescription: '',
     fullDescription: '',
-    dates: '',
     price: 'Gratis',
     imageUrl: '',
     address: '',
@@ -29,8 +32,26 @@ const CreateEventPage: React.FC = () => {
     category: 'upcoming',
   });
 
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleLocationChange = (lat: number, lng: number) => {
+    console.log('Location selected:', lat, lng);
+    // Puedes guardar las coordenadas si las necesitas
+  };
+
+  const generateDatesString = () => {
+    if (!startDate) return '';
+    
+    if (endDate && startDate.getTime() !== endDate.getTime()) {
+      return `${format(startDate, 'dd/MM/yyyy')} - ${format(endDate, 'dd/MM/yyyy')}`;
+    }
+    
+    return format(startDate, 'dd/MM/yyyy');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,16 +65,26 @@ const CreateEventPage: React.FC = () => {
       return;
     }
 
+    if (!startDate) {
+      toast({
+        title: "Error",
+        description: "Debes seleccionar al menos la fecha de inicio.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Mapear los nombres de propiedades del formulario a los nombres de columnas de la base de datos
       const eventData = {
         user_id: user.id,
         title: formData.title,
         short_description: formData.shortDescription,
         full_description: formData.fullDescription,
-        dates: formData.dates,
+        dates: generateDatesString(),
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate ? endDate.toISOString().split('T')[0] : startDate.toISOString().split('T')[0],
         price: formData.price,
         image_url: formData.imageUrl,
         address: formData.address,
@@ -126,7 +157,7 @@ const CreateEventPage: React.FC = () => {
             <CardTitle>Información del Evento</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="title" className="block text-sm font-medium mb-1">
                   Título del Evento *
@@ -168,60 +199,40 @@ const CreateEventPage: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="dates" className="block text-sm font-medium mb-1">
-                    Fechas *
-                  </label>
-                  <div className="relative">
-                    <Input
-                      id="dates"
-                      type="text"
-                      placeholder="ej: 15-17 Junio 2024"
-                      value={formData.dates}
-                      onChange={(e) => handleInputChange('dates', e.target.value)}
-                      required
-                      className="pl-10"
-                    />
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="price" className="block text-sm font-medium mb-1">
-                    Precio
-                  </label>
-                  <div className="relative">
-                    <Input
-                      id="price"
-                      type="text"
-                      placeholder="ej: Gratis, $10.000 CLP"
-                      value={formData.price}
-                      onChange={(e) => handleInputChange('price', e.target.value)}
-                      className="pl-10"
-                    />
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  </div>
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Fechas del Evento *
+                </label>
+                <DateRangePicker
+                  startDate={startDate}
+                  endDate={endDate}
+                  onStartDateChange={setStartDate}
+                  onEndDateChange={setEndDate}
+                />
               </div>
 
               <div>
-                <label htmlFor="address" className="block text-sm font-medium mb-1">
-                  Dirección *
+                <label htmlFor="price" className="block text-sm font-medium mb-1">
+                  Precio
                 </label>
                 <div className="relative">
                   <Input
-                    id="address"
+                    id="price"
                     type="text"
-                    placeholder="Dirección completa del evento"
-                    value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                    required
+                    placeholder="ej: Gratis, $10.000 CLP"
+                    value={formData.price}
+                    onChange={(e) => handleInputChange('price', e.target.value)}
                     className="pl-10"
                   />
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 </div>
               </div>
+
+              <LocationPicker
+                address={formData.address}
+                onAddressChange={(address) => handleInputChange('address', address)}
+                onLocationChange={handleLocationChange}
+              />
 
               <div>
                 <label htmlFor="contactInfo" className="block text-sm font-medium mb-1">
@@ -240,22 +251,10 @@ const CreateEventPage: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="imageUrl" className="block text-sm font-medium mb-1">
-                  URL de Imagen
-                </label>
-                <div className="relative">
-                  <Input
-                    id="imageUrl"
-                    type="url"
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                    value={formData.imageUrl}
-                    onChange={(e) => handleInputChange('imageUrl', e.target.value)}
-                    className="pl-10"
-                  />
-                  <Image className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                </div>
-              </div>
+              <ImageUploader
+                imageUrl={formData.imageUrl}
+                onImageChange={(url) => handleInputChange('imageUrl', url)}
+              />
 
               <div>
                 <label htmlFor="category" className="block text-sm font-medium mb-1">

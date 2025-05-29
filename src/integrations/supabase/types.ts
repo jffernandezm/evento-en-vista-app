@@ -40,11 +40,13 @@ export type Database = {
           contact_info: string | null
           created_at: string
           dates: string
+          end_date: string | null
           full_description: string | null
           id: string
           image_url: string | null
           price: string
           short_description: string
+          start_date: string | null
           title: string
           updated_at: string
           user_id: string
@@ -55,11 +57,13 @@ export type Database = {
           contact_info?: string | null
           created_at?: string
           dates: string
+          end_date?: string | null
           full_description?: string | null
           id?: string
           image_url?: string | null
           price?: string
           short_description: string
+          start_date?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -70,11 +74,13 @@ export type Database = {
           contact_info?: string | null
           created_at?: string
           dates?: string
+          end_date?: string | null
           full_description?: string | null
           id?: string
           image_url?: string | null
           price?: string
           short_description?: string
+          start_date?: string | null
           title?: string
           updated_at?: string
           user_id?: string
