@@ -141,16 +141,16 @@ const AuthPage: React.FC = () => {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={loading}>
                 {loading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Registrarse')}
               </Button>
             </form>
 
             <div className="mt-4 text-center">
               <Button
-                variant="link"
+                variant="ghost"
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-sm"
+                className="text-sm text-primary hover:text-primary/80 hover:bg-primary/10"
               >
                 {isLogin
                   ? '¿No tienes cuenta? Regístrate aquí'
