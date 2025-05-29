@@ -47,12 +47,23 @@ const CreateEventPage: React.FC = () => {
     setLoading(true);
 
     try {
+      // Mapear los nombres de propiedades del formulario a los nombres de columnas de la base de datos
+      const eventData = {
+        user_id: user.id,
+        title: formData.title,
+        short_description: formData.shortDescription,
+        full_description: formData.fullDescription,
+        dates: formData.dates,
+        price: formData.price,
+        image_url: formData.imageUrl,
+        address: formData.address,
+        contact_info: formData.contactInfo,
+        category: formData.category,
+      };
+
       const { error } = await supabase
         .from('user_events')
-        .insert([{
-          user_id: user.id,
-          ...formData,
-        }]);
+        .insert([eventData]);
 
       if (error) {
         console.error('Error creating event:', error);
