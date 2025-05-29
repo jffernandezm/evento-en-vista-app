@@ -9,7 +9,86 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_events: {
+        Row: {
+          address: string
+          category: string | null
+          contact_info: string | null
+          created_at: string
+          dates: string
+          full_description: string | null
+          id: string
+          image_url: string | null
+          price: string
+          short_description: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          category?: string | null
+          contact_info?: string | null
+          created_at?: string
+          dates: string
+          full_description?: string | null
+          id?: string
+          image_url?: string | null
+          price?: string
+          short_description: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          category?: string | null
+          contact_info?: string | null
+          created_at?: string
+          dates?: string
+          full_description?: string | null
+          id?: string
+          image_url?: string | null
+          price?: string
+          short_description?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
