@@ -20,7 +20,7 @@ interface LocationPickerProps {
 }
 
 function LocationMarker({ onLocationChange }: { onLocationChange?: (lat: number, lng: number) => void }) {
-  const [position, setPosition] = useState<[number, number] | null>(null);
+  const [position, setPosition] = useState<L.LatLngExpression | null>(null);
   
   const map = useMapEvents({
     click(e) {
@@ -67,7 +67,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       
       <div className="h-64 w-full rounded-lg overflow-hidden border">
         <MapContainer
-          center={[-33.4489, -70.6693]} // Santiago, Chile
+          center={[-33.4489, -70.6693] as L.LatLngExpression}
           zoom={13}
           style={{ height: '100%', width: '100%' }}
         >
