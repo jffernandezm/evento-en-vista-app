@@ -11,25 +11,18 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { User, Plus, LogOut, LogIn } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
 const UserMenu: React.FC = () => {
   const { user, signOut } = useAuth();
-  const { toast } = useToast();
 
   const handleSignOut = async () => {
     const { error } = await signOut();
     if (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo cerrar sesión. Intenta de nuevo.",
-        variant: "destructive",
-      });
+      console.error("Error signing out:", error);
+      alert("No se pudo cerrar sesión. Intenta de nuevo.");
     } else {
-      toast({
-        title: "Sesión cerrada",
-        description: "Has cerrado sesión exitosamente.",
-      });
+      console.log("Successfully signed out");
+      alert("Has cerrado sesión exitosamente.");
     }
   };
 
