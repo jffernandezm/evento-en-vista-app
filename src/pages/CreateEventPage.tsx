@@ -11,13 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, DollarSign, Phone, MapPin } from 'lucide-react';
 import DateRangePicker from '@/components/DateRangePicker';
 import ImageUploader from '@/components/ImageUploader';
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
 const CreateEventPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -47,26 +48,49 @@ const CreateEventPage: React.FC = () => {
     return format(startDate, 'dd/MM/yyyy');
   };
 
-  const showMessage = (msg: string, isError: boolean = false) => {
-    setMessage(msg);
-    setTimeout(() => setMessage(''), 3000);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      showMessage("Debes iniciar sesión para crear eventos.", true);
+      toast({
+        title: "Error",
+        description: "Debes iniciar sesión para crear eventos",
+        variant: "destructive"
+      });
       return;
     }
 
     if (!startDate) {
-      showMessage("Debes seleccionar al menos la fecha de inicio.", true);
+      toast({
+        title: "Error", 
+        description: "Debes seleccionar al menos la fecha de inicio",
+        variant: "destructive"
+      });
       return;
     }
 
     setLoading(true);
 
     try {
+      // Geocodificar la dirección
+      let latitude = null;
+      let longitude = null;
+
+      if (formData.address) {
+        try {
+          const geocodeResponse = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address)}&limit=1`
+          );
+          const geocodeData = await geocodeResponse.json();
+          
+          if (geocodeData && geocodeData.length > 0) {
+            latitude = parseFloat(geocodeData[0].lat);
+            longitude = parseFloat(geocodeData[0].lon);
+          }
+        } catch (error) {
+          console.error('Error geocoding address:', error);
+        }
+      }
+
       const eventData = {
         user_id: user.id,
         title: formData.title,
@@ -80,6 +104,8 @@ const CreateEventPage: React.FC = () => {
         address: formData.address,
         contact_info: formData.contactInfo,
         category: formData.category,
+        latitude,
+        longitude,
       };
 
       const { error } = await supabase
@@ -88,14 +114,25 @@ const CreateEventPage: React.FC = () => {
 
       if (error) {
         console.error('Error creating event:', error);
-        showMessage("No se pudo crear el evento. Intenta de nuevo.", true);
+        toast({
+          title: "Error",
+          description: "No se pudo crear el evento. Intenta de nuevo",
+          variant: "destructive"
+        });
       } else {
-        showMessage("¡Evento creado exitosamente!");
+        toast({
+          title: "Éxito",
+          description: "¡Evento creado exitosamente!"
+        });
         setTimeout(() => navigate('/'), 1500);
       }
     } catch (error) {
       console.error('Unexpected error:', error);
-      showMessage("Ocurrió un error inesperado. Intenta de nuevo.", true);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error inesperado. Intenta de nuevo",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -129,16 +166,6 @@ const CreateEventPage: React.FC = () => {
           <h1 className="text-2xl font-bold">Crear Nuevo Evento</h1>
         </div>
       </header>
-
-      {message && (
-        <div className={`fixed top-4 right-4 p-4 rounded-md shadow-lg z-50 ${
-          message.includes('Error') || message.includes('No se pudo') || message.includes('Debes') 
-            ? 'bg-red-500 text-white' 
-            : 'bg-green-500 text-white'
-        }`}>
-          {message}
-        </div>
-      )}
 
       <main className="container mx-auto p-4 max-w-2xl">
         <Card>
@@ -254,7 +281,11 @@ const CreateEventPage: React.FC = () => {
               <ImageUploader
                 imageUrl={formData.imageUrl}
                 onImageChange={(url) => handleInputChange('imageUrl', url)}
-                onMessage={showMessage}
+                onMessage={(msg, isError) => toast({
+                  title: isError ? "Error" : "Éxito",
+                  description: msg,
+                  variant: isError ? "destructive" : "default"
+                })}
               />
 
               <div>

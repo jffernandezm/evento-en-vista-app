@@ -1,5 +1,6 @@
 
 export interface EventActivity {
+  id?: string;
   time: string;
   description: string;
 }
@@ -23,4 +24,26 @@ export interface EventType {
   contactInfo: string;
   activitiesByDay?: EventDay[]; // Optional for multi-day events
   category?: "ongoing" | "upcoming" | "past";
+  user_id?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface DatabaseEventActivity {
+  id: string;
+  event_id: string;
+  day_date: string;
+  time_slot: string;
+  activity_description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  role: 'admin' | 'user';
+  created_at: string;
+  updated_at: string;
 }

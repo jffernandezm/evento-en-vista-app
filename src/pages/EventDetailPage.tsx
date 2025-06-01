@@ -1,18 +1,61 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { mockEvents } from '@/data/mockEvents';
-import { EventType, EventDay } from '@/types/event';
+import { useEvents } from '@/hooks/useEvents';
+import { useAuth } from '@/hooks/useAuth';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { EventType } from '@/types/event';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CalendarDays, MapPin, DollarSign, Info, Users, Phone } from 'lucide-react';
+import { ArrowLeft, CalendarDays, DollarSign, Info, Phone, Edit } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
+import EventMap from '@/components/EventMap';
+import EventActivitiesManager from '@/components/EventActivitiesManager';
 
 const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const event = mockEvents.find(e => e.id === id);
+  const { user } = useAuth();
+  const { isAdmin } = useUserProfile();
+  const { getEventById } = useEvents();
+  const [event, setEvent] = useState<EventType | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (id) {
+      loadEvent();
+    }
+  }, [id]);
+
+  const loadEvent = async () => {
+    if (!id) return;
+
+    setLoading(true);
+    try {
+      // Primero intentar obtener de eventos de usuario
+      const userEvent = await getEventById(id);
+      if (userEvent) {
+        setEvent(userEvent);
+      } else {
+        // Si no se encuentra, buscar en mockEvents
+        const { mockEvents } = await import('@/data/mockEvents');
+        const mockEvent = mockEvents.find(e => e.id === id);
+        setEvent(mockEvent || null);
+      }
+    } catch (error) {
+      console.error('Error loading event:', error);
+      setEvent(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-xl">Cargando evento...</p>
+      </div>
+    );
+  }
 
   if (!event) {
     return (
@@ -25,6 +68,9 @@ const EventDetailPage: React.FC = () => {
     );
   }
 
+  const canEdit = user && event.user_id && (event.user_id === user.id || isAdmin);
+  const isUserEvent = !!event.user_id;
+
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
       <div className="relative">
@@ -33,7 +79,15 @@ const EventDetailPage: React.FC = () => {
             <CarouselContent>
               {event.images.map((img, index) => (
                 <CarouselItem key={index}>
-                  <img src={img} alt={`${event.title} - Imagen ${index + 1}`} className="w-full h-64 md:h-96 object-cover" />
+                  <img 
+                    src={img} 
+                    alt={`${event.title} - Imagen ${index + 1}`} 
+                    className="w-full h-64 md:h-96 object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder.svg';
+                    }}
+                  />
                 </CarouselItem>
               ))}
             </CarouselContent>
@@ -45,7 +99,15 @@ const EventDetailPage: React.FC = () => {
             )}
           </Carousel>
         ) : (
-          <img src={event.imageUrl} alt={event.title} className="w-full h-64 md:h-96 object-cover" />
+          <img 
+            src={event.imageUrl} 
+            alt={event.title} 
+            className="w-full h-64 md:h-96 object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/placeholder.svg';
+            }}
+          />
         )}
         <div className="absolute top-4 left-4">
           <Button asChild variant="outline" size="icon" className="rounded-full bg-white/70 hover:bg-white">
@@ -54,6 +116,15 @@ const EventDetailPage: React.FC = () => {
             </Link>
           </Button>
         </div>
+        {canEdit && (
+          <div className="absolute top-4 right-4">
+            <Button asChild variant="outline" size="icon" className="rounded-full bg-white/70 hover:bg-white">
+              <Link to={`/edit-event/${id}`}>
+                <Edit className="w-5 h-5" />
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="container mx-auto p-4 -mt-12">
@@ -68,8 +139,8 @@ const EventDetailPage: React.FC = () => {
                 <span>{event.dates}</span>
               </div>
               <div className="flex items-center p-3 bg-gray-100 rounded-lg">
-                <MapPin className="w-5 h-5 mr-3 text-primary" />
-                <span>{event.distance} (Desde: {event.address})</span>
+                <span className="w-5 h-5 mr-3 text-primary flex items-center justify-center text-xs">📍</span>
+                <span>{event.distance}</span>
               </div>
               <div className="flex items-center p-3 bg-gray-100 rounded-lg">
                 <DollarSign className="w-5 h-5 mr-3 text-primary" />
@@ -78,44 +149,58 @@ const EventDetailPage: React.FC = () => {
             </div>
 
             <div>
-              <h2 className="text-xl font-semibold mb-2 flex items-center"><Info className="w-5 h-5 mr-2 text-primary"/>Descripción</h2>
+              <h2 className="text-xl font-semibold mb-2 flex items-center">
+                <Info className="w-5 h-5 mr-2 text-primary"/>
+                Descripción
+              </h2>
               <p className="text-gray-700 leading-relaxed">{event.fullDescription}</p>
             </div>
 
-            {event.activitiesByDay && event.activitiesByDay.length > 0 && (
+            {isUserEvent && (
+              <EventActivitiesManager eventId={id!} canEdit={canEdit || false} />
+            )}
+
+            {event.activitiesByDay && event.activitiesByDay.length > 0 && !isUserEvent && (
               <div>
-                <h2 className="text-xl font-semibold mb-2 flex items-center"><Users className="w-5 h-5 mr-2 text-primary"/>Actividades por Día</h2>
-                <Accordion type="single" collapsible className="w-full">
+                <h2 className="text-xl font-semibold mb-2 flex items-center">
+                  <CalendarDays className="w-5 h-5 mr-2 text-primary"/>
+                  Actividades por Día
+                </h2>
+                <div className="space-y-4">
                   {event.activitiesByDay.map((day, index) => (
-                    <AccordionItem value={`item-${index}`} key={index}>
-                      <AccordionTrigger className="font-medium">{day.date}</AccordionTrigger>
-                      <AccordionContent>
+                    <Card key={index}>
+                      <CardHeader>
+                        <CardTitle className="text-base">{day.date}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
                         <ul className="list-disc pl-5 space-y-1 text-gray-600">
                           {day.activities.map((activity, actIndex) => (
-                            <li key={actIndex}><strong>{activity.time}:</strong> {activity.description}</li>
+                            <li key={actIndex}>
+                              <strong>{activity.time}:</strong> {activity.description}
+                            </li>
                           ))}
                         </ul>
-                      </AccordionContent>
-                    </AccordionItem>
+                      </CardContent>
+                    </Card>
                   ))}
-                </Accordion>
+                </div>
               </div>
             )}
             
-            <div>
-              <h2 className="text-xl font-semibold mb-2 flex items-center"><MapPin className="w-5 h-5 mr-2 text-primary"/>Ubicación</h2>
-              <p className="text-gray-700">{event.address}</p>
-              <div className="mt-2">
-                {/* Placeholder for map integration */}
-                <Button variant="outline">Ver en Mapa (Próximamente)</Button>
-              </div>
-            </div>
+            <EventMap 
+              address={event.address}
+              latitude={event.latitude}
+              longitude={event.longitude}
+              title={event.title}
+            />
 
             <div>
-              <h2 className="text-xl font-semibold mb-2 flex items-center"><Phone className="w-5 h-5 mr-2 text-primary"/>Contacto</h2>
+              <h2 className="text-xl font-semibold mb-2 flex items-center">
+                <Phone className="w-5 h-5 mr-2 text-primary"/>
+                Contacto
+              </h2>
               <p className="text-gray-700">{event.contactInfo}</p>
             </div>
-
           </CardContent>
         </Card>
       </div>
