@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -249,6 +248,7 @@ const CreateEventPage: React.FC = () => {
               <ImageUploader
                 imageUrl={formData.imageUrl}
                 onImageChange={(url) => handleInputChange('imageUrl', url)}
+                onMessage={showMessage}
               />
 
               <div>

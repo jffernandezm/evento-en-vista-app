@@ -4,16 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 
 interface ImageUploaderProps {
   imageUrl: string;
   onImageChange: (url: string) => void;
+  onMessage?: (message: string, isError?: boolean) => void;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ imageUrl, onImageChange }) => {
+const ImageUploader: React.FC<ImageUploaderProps> = ({ imageUrl, onImageChange, onMessage }) => {
   const [uploading, setUploading] = useState(false);
-  const { toast } = useToast();
 
   const uploadImage = async (file: File) => {
     try {
@@ -36,18 +35,10 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ imageUrl, onImageChange }
         .getPublicUrl(filePath);
 
       onImageChange(data.publicUrl);
-      
-      toast({
-        title: "¡Imagen subida!",
-        description: "La imagen se ha subido exitosamente.",
-      });
+      onMessage?.("¡Imagen subida exitosamente!");
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo subir la imagen. Intenta de nuevo.",
-        variant: "destructive",
-      });
+      onMessage?.("No se pudo subir la imagen. Intenta de nuevo.", true);
     } finally {
       setUploading(false);
     }
@@ -57,11 +48,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ imageUrl, onImageChange }
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({
-          title: "Archivo muy grande",
-          description: "La imagen no puede ser mayor a 5MB.",
-          variant: "destructive",
-        });
+        onMessage?.("La imagen no puede ser mayor a 5MB.", true);
         return;
       }
       uploadImage(file);
