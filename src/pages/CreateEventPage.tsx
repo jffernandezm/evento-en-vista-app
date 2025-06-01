@@ -9,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, DollarSign, Phone } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import DateRangePicker from '@/components/DateRangePicker';
 import ImageUploader from '@/components/ImageUploader';
 import LocationPicker from '@/components/LocationPicker';
@@ -18,8 +17,8 @@ import { format } from 'date-fns';
 const CreateEventPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -54,23 +53,20 @@ const CreateEventPage: React.FC = () => {
     return format(startDate, 'dd/MM/yyyy');
   };
 
+  const showMessage = (msg: string, isError: boolean = false) => {
+    setMessage(msg);
+    setTimeout(() => setMessage(''), 3000);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      toast({
-        title: "Error",
-        description: "Debes iniciar sesión para crear eventos.",
-        variant: "destructive",
-      });
+      showMessage("Debes iniciar sesión para crear eventos.", true);
       return;
     }
 
     if (!startDate) {
-      toast({
-        title: "Error",
-        description: "Debes seleccionar al menos la fecha de inicio.",
-        variant: "destructive",
-      });
+      showMessage("Debes seleccionar al menos la fecha de inicio.", true);
       return;
     }
 
@@ -98,25 +94,14 @@ const CreateEventPage: React.FC = () => {
 
       if (error) {
         console.error('Error creating event:', error);
-        toast({
-          title: "Error",
-          description: "No se pudo crear el evento. Intenta de nuevo.",
-          variant: "destructive",
-        });
+        showMessage("No se pudo crear el evento. Intenta de nuevo.", true);
       } else {
-        toast({
-          title: "¡Evento creado!",
-          description: "Tu evento ha sido publicado exitosamente.",
-        });
-        navigate('/');
+        showMessage("¡Evento creado exitosamente!");
+        setTimeout(() => navigate('/'), 1500);
       }
     } catch (error) {
       console.error('Unexpected error:', error);
-      toast({
-        title: "Error",
-        description: "Ocurrió un error inesperado. Intenta de nuevo.",
-        variant: "destructive",
-      });
+      showMessage("Ocurrió un error inesperado. Intenta de nuevo.", true);
     } finally {
       setLoading(false);
     }
@@ -150,6 +135,16 @@ const CreateEventPage: React.FC = () => {
           <h1 className="text-2xl font-bold">Crear Nuevo Evento</h1>
         </div>
       </header>
+
+      {message && (
+        <div className={`fixed top-4 right-4 p-4 rounded-md shadow-lg z-50 ${
+          message.includes('Error') || message.includes('No se pudo') || message.includes('Debes') 
+            ? 'bg-red-500 text-white' 
+            : 'bg-green-500 text-white'
+        }`}>
+          {message}
+        </div>
+      )}
 
       <main className="container mx-auto p-4 max-w-2xl">
         <Card>
