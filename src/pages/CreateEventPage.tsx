@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,10 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, DollarSign, Phone } from 'lucide-react';
+import { ArrowLeft, DollarSign, Phone, MapPin } from 'lucide-react';
 import DateRangePicker from '@/components/DateRangePicker';
 import ImageUploader from '@/components/ImageUploader';
-import LocationPicker from '@/components/LocationPicker';
 import { format } from 'date-fns';
 
 const CreateEventPage: React.FC = () => {
@@ -35,11 +35,6 @@ const CreateEventPage: React.FC = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleLocationChange = (lat: number, lng: number) => {
-    console.log('Location selected:', lat, lng);
-    // Puedes guardar las coordenadas si las necesitas
   };
 
   const generateDatesString = () => {
@@ -222,11 +217,22 @@ const CreateEventPage: React.FC = () => {
                 </div>
               </div>
 
-              <LocationPicker
-                address={formData.address}
-                onAddressChange={(address) => handleInputChange('address', address)}
-                onLocationChange={handleLocationChange}
-              />
+              <div>
+                <label htmlFor="address" className="block text-sm font-medium mb-1">
+                  Dirección del Evento
+                </label>
+                <div className="relative">
+                  <Input
+                    id="address"
+                    type="text"
+                    placeholder="Dirección completa del evento"
+                    value={formData.address}
+                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    className="pl-10"
+                  />
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                </div>
+              </div>
 
               <div>
                 <label htmlFor="contactInfo" className="block text-sm font-medium mb-1">
