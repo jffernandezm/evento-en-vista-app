@@ -25,9 +25,15 @@ export const useEvents = () => {
       return data.map((event: UserEvent): EventType => {
         let distance = 'Ubicación no disponible';
         
-        // Por ahora usar distancia simulada hasta que tengamos coordenadas en la BD
-        const distances = ['A 2.5km de ti', 'A 1.2km de ti', 'A 850m de ti', 'A 3.1km de ti'];
-        distance = distances[Math.floor(Math.random() * distances.length)];
+        // Calcular distancia real si tenemos coordenadas del evento y del usuario
+        if (event.latitude && event.longitude && latitude && longitude) {
+          const distanceKm = calculateDistance(latitude, longitude, event.latitude, event.longitude);
+          distance = `A ${distanceKm.toFixed(1)}km de ti`;
+        } else {
+          // Usar distancia simulada si no tenemos coordenadas
+          const distances = ['A 2.5km de ti', 'A 1.2km de ti', 'A 850m de ti', 'A 3.1km de ti'];
+          distance = distances[Math.floor(Math.random() * distances.length)];
+        }
 
         return {
           id: event.id,
@@ -43,6 +49,8 @@ export const useEvents = () => {
           contactInfo: event.contact_info || '',
           category: (event.category as "ongoing" | "upcoming" | "past") || 'upcoming',
           user_id: event.user_id,
+          latitude: event.latitude || undefined,
+          longitude: event.longitude || undefined,
         };
       });
     } catch (error) {
@@ -66,9 +74,15 @@ export const useEvents = () => {
 
       let distance = 'Ubicación no disponible';
       
-      // Por ahora usar distancia simulada
-      const distances = ['A 2.5km de ti', 'A 1.2km de ti', 'A 850m de ti', 'A 3.1km de ti'];
-      distance = distances[Math.floor(Math.random() * distances.length)];
+      // Calcular distancia real si tenemos coordenadas
+      if (data.latitude && data.longitude && latitude && longitude) {
+        const distanceKm = calculateDistance(latitude, longitude, data.latitude, data.longitude);
+        distance = `A ${distanceKm.toFixed(1)}km de ti`;
+      } else {
+        // Usar distancia simulada
+        const distances = ['A 2.5km de ti', 'A 1.2km de ti', 'A 850m de ti', 'A 3.1km de ti'];
+        distance = distances[Math.floor(Math.random() * distances.length)];
+      }
 
       return {
         id: data.id,
@@ -84,6 +98,8 @@ export const useEvents = () => {
         contactInfo: data.contact_info || '',
         category: (data.category as "ongoing" | "upcoming" | "past") || 'upcoming',
         user_id: data.user_id,
+        latitude: data.latitude || undefined,
+        longitude: data.longitude || undefined,
       };
     } catch (error) {
       console.error('Error fetching event:', error);

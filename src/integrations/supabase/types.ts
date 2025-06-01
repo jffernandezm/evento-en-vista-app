@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      event_activities: {
+        Row: {
+          activity_description: string
+          created_at: string
+          day_date: string
+          event_id: string
+          id: string
+          time_slot: string
+          updated_at: string
+        }
+        Insert: {
+          activity_description: string
+          created_at?: string
+          day_date: string
+          event_id: string
+          id?: string
+          time_slot: string
+          updated_at?: string
+        }
+        Update: {
+          activity_description?: string
+          created_at?: string
+          day_date?: string
+          event_id?: string
+          id?: string
+          time_slot?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_activities_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "user_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -44,6 +82,8 @@ export type Database = {
           full_description: string | null
           id: string
           image_url: string | null
+          latitude: number | null
+          longitude: number | null
           price: string
           short_description: string
           start_date: string | null
@@ -61,6 +101,8 @@ export type Database = {
           full_description?: string | null
           id?: string
           image_url?: string | null
+          latitude?: number | null
+          longitude?: number | null
           price?: string
           short_description: string
           start_date?: string | null
@@ -78,6 +120,8 @@ export type Database = {
           full_description?: string | null
           id?: string
           image_url?: string | null
+          latitude?: number | null
+          longitude?: number | null
           price?: string
           short_description?: string
           start_date?: string | null

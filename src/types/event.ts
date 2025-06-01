@@ -10,6 +10,17 @@ export interface EventDay {
   activities: EventActivity[];
 }
 
+// Tipo para las actividades en la base de datos
+export interface DatabaseEventActivity {
+  id: string;
+  event_id: string;
+  day_date: string;
+  time_slot: string;
+  activity_description: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface EventType {
   id: string;
   title: string;
@@ -46,6 +57,8 @@ export interface UserEvent {
   updated_at: string;
   start_date: string | null;
   end_date: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface UserProfile {

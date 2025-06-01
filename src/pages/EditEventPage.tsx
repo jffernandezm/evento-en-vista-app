@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -92,9 +91,8 @@ const EditEventPage: React.FC = () => {
         address: data.address,
         contactInfo: data.contact_info || '',
         category: data.category || 'upcoming',
-        // Safely handle latitude/longitude that may not exist in current DB structure
-        latitude: (data as any).latitude || null,
-        longitude: (data as any).longitude || null,
+        latitude: data.latitude || null,
+        longitude: data.longitude || null,
       });
 
       if (data.start_date) {
@@ -180,8 +178,8 @@ const EditEventPage: React.FC = () => {
         contact_info: formData.contactInfo,
         category: formData.category,
         updated_at: new Date().toISOString(),
-        // Only include lat/lng if they exist (for future DB migrations)
-        ...(lat && lng ? { latitude: lat, longitude: lng } : {})
+        latitude: lat,
+        longitude: lng,
       };
 
       const { error } = await supabase
