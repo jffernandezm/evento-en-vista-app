@@ -38,7 +38,8 @@ export const useUserProfile = () => {
     fetchProfile();
   }, [user]);
 
-  const isAdmin = profile?.role === 'admin';
+  // Por ahora, simular rol de admin basado en email para desarrollo
+  const isAdmin = profile?.email?.includes('admin') || false;
 
   return { profile, loading, isAdmin };
 };

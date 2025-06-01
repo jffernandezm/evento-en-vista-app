@@ -2,24 +2,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { mockEvents } from '@/data/mockEvents';
-import { EventType } from '@/types/event';
+import { EventType, UserEvent } from '@/types/event';
 import { useGeolocation } from '@/hooks/useGeolocation';
-
-interface UserEvent {
-  id: string;
-  title: string;
-  short_description: string;
-  full_description: string | null;
-  dates: string;
-  price: string;
-  image_url: string | null;
-  address: string;
-  contact_info: string | null;
-  category: string | null;
-  user_id: string;
-  latitude: number | null;
-  longitude: number | null;
-}
 
 export const useEvents = () => {
   const [userEvents, setUserEvents] = useState<EventType[]>([]);
@@ -41,14 +25,9 @@ export const useEvents = () => {
       return data.map((event: UserEvent): EventType => {
         let distance = 'Ubicación no disponible';
         
-        if (latitude && longitude && event.latitude && event.longitude) {
-          const distanceKm = calculateDistance(latitude, longitude, event.latitude, event.longitude);
-          if (distanceKm < 1) {
-            distance = `A ${Math.round(distanceKm * 1000)}m de ti`;
-          } else {
-            distance = `A ${distanceKm.toFixed(1)}km de ti`;
-          }
-        }
+        // Por ahora usar distancia simulada hasta que tengamos coordenadas en la BD
+        const distances = ['A 2.5km de ti', 'A 1.2km de ti', 'A 850m de ti', 'A 3.1km de ti'];
+        distance = distances[Math.floor(Math.random() * distances.length)];
 
         return {
           id: event.id,
@@ -64,8 +43,6 @@ export const useEvents = () => {
           contactInfo: event.contact_info || '',
           category: (event.category as "ongoing" | "upcoming" | "past") || 'upcoming',
           user_id: event.user_id,
-          latitude: event.latitude || undefined,
-          longitude: event.longitude || undefined,
         };
       });
     } catch (error) {
@@ -89,14 +66,9 @@ export const useEvents = () => {
 
       let distance = 'Ubicación no disponible';
       
-      if (latitude && longitude && data.latitude && data.longitude) {
-        const distanceKm = calculateDistance(latitude, longitude, data.latitude, data.longitude);
-        if (distanceKm < 1) {
-          distance = `A ${Math.round(distanceKm * 1000)}m de ti`;
-        } else {
-          distance = `A ${distanceKm.toFixed(1)}km de ti`;
-        }
-      }
+      // Por ahora usar distancia simulada
+      const distances = ['A 2.5km de ti', 'A 1.2km de ti', 'A 850m de ti', 'A 3.1km de ti'];
+      distance = distances[Math.floor(Math.random() * distances.length)];
 
       return {
         id: data.id,
@@ -112,8 +84,6 @@ export const useEvents = () => {
         contactInfo: data.contact_info || '',
         category: (data.category as "ongoing" | "upcoming" | "past") || 'upcoming',
         user_id: data.user_id,
-        latitude: data.latitude || undefined,
-        longitude: data.longitude || undefined,
       };
     } catch (error) {
       console.error('Error fetching event:', error);

@@ -29,21 +29,29 @@ export interface EventType {
   longitude?: number;
 }
 
-export interface DatabaseEventActivity {
+// Usar la estructura actual de la base de datos
+export interface UserEvent {
   id: string;
-  event_id: string;
-  day_date: string;
-  time_slot: string;
-  activity_description: string;
+  title: string;
+  short_description: string;
+  full_description: string | null;
+  dates: string;
+  price: string;
+  image_url: string | null;
+  address: string;
+  contact_info: string | null;
+  category: string | null;
+  user_id: string;
   created_at: string;
   updated_at: string;
+  start_date: string | null;
+  end_date: string | null;
 }
 
 export interface UserProfile {
   id: string;
   email: string | null;
   full_name: string | null;
-  role: 'admin' | 'user';
   created_at: string;
   updated_at: string;
 }

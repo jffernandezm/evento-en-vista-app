@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useEvents } from '@/hooks/useEvents';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { EventType } from '@/types/event';
+import { EventType, EventDay } from '@/types/event';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CalendarDays, DollarSign, Info, Phone, Edit } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -19,6 +19,7 @@ const EventDetailPage: React.FC = () => {
   const { getEventById } = useEvents();
   const [event, setEvent] = useState<EventType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [eventActivities, setEventActivities] = useState<EventDay[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -35,11 +36,18 @@ const EventDetailPage: React.FC = () => {
       const userEvent = await getEventById(id);
       if (userEvent) {
         setEvent(userEvent);
+        // Si es un evento de usuario, cargar actividades si existen
+        setEventActivities(userEvent.activitiesByDay || []);
       } else {
         // Si no se encuentra, buscar en mockEvents
         const { mockEvents } = await import('@/data/mockEvents');
         const mockEvent = mockEvents.find(e => e.id === id);
-        setEvent(mockEvent || null);
+        if (mockEvent) {
+          setEvent(mockEvent);
+          setEventActivities(mockEvent.activitiesByDay || []);
+        } else {
+          setEvent(null);
+        }
       }
     } catch (error) {
       console.error('Error loading event:', error);
@@ -156,36 +164,12 @@ const EventDetailPage: React.FC = () => {
               <p className="text-gray-700 leading-relaxed">{event.fullDescription}</p>
             </div>
 
-            {isUserEvent && (
-              <EventActivitiesManager eventId={id!} canEdit={canEdit || false} />
-            )}
-
-            {event.activitiesByDay && event.activitiesByDay.length > 0 && !isUserEvent && (
-              <div>
-                <h2 className="text-xl font-semibold mb-2 flex items-center">
-                  <CalendarDays className="w-5 h-5 mr-2 text-primary"/>
-                  Actividades por Día
-                </h2>
-                <div className="space-y-4">
-                  {event.activitiesByDay.map((day, index) => (
-                    <Card key={index}>
-                      <CardHeader>
-                        <CardTitle className="text-base">{day.date}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                          {day.activities.map((activity, actIndex) => (
-                            <li key={actIndex}>
-                              <strong>{activity.time}:</strong> {activity.description}
-                            </li>
-                          ))}
-                        </ul>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
+            <EventActivitiesManager 
+              eventId={id!} 
+              canEdit={canEdit || false} 
+              initialActivities={eventActivities}
+              onActivitiesChange={setEventActivities}
+            />
             
             <EventMap 
               address={event.address}

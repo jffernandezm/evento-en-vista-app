@@ -1,54 +1,36 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, Calendar, Clock } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { DatabaseEventActivity } from '@/types/event';
+import { EventDay, EventActivity } from '@/types/event';
 
 interface EventActivitiesManagerProps {
   eventId: string;
   canEdit: boolean;
+  initialActivities?: EventDay[];
+  onActivitiesChange?: (activities: EventDay[]) => void;
 }
 
-const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId, canEdit }) => {
-  const [activities, setActivities] = useState<DatabaseEventActivity[]>([]);
+const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ 
+  eventId, 
+  canEdit, 
+  initialActivities = [],
+  onActivitiesChange 
+}) => {
+  const [activities, setActivities] = useState<EventDay[]>(initialActivities);
   const [newActivity, setNewActivity] = useState({
-    day_date: '',
-    time_slot: '',
-    activity_description: ''
+    date: '',
+    time: '',
+    description: ''
   });
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchActivities();
-  }, [eventId]);
-
-  const fetchActivities = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('event_activities')
-        .select('*')
-        .eq('event_id', eventId)
-        .order('day_date', { ascending: true })
-        .order('time_slot', { ascending: true });
-
-      if (error) {
-        console.error('Error fetching activities:', error);
-      } else {
-        setActivities(data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching activities:', error);
-    }
-  };
-
-  const addActivity = async () => {
-    if (!newActivity.day_date || !newActivity.time_slot || !newActivity.activity_description) {
+  const addActivity = () => {
+    if (!newActivity.date || !newActivity.time || !newActivity.description) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos",
@@ -57,76 +39,62 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
       return;
     }
 
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('event_activities')
-        .insert([{
-          event_id: eventId,
-          ...newActivity
-        }]);
+    const existingDayIndex = activities.findIndex(day => day.date === newActivity.date);
+    
+    const newActivityObj: EventActivity = {
+      id: Date.now().toString(),
+      time: newActivity.time,
+      description: newActivity.description
+    };
 
-      if (error) {
-        console.error('Error adding activity:', error);
-        toast({
-          title: "Error",
-          description: "No se pudo agregar la actividad",
-          variant: "destructive"
-        });
-      } else {
-        setNewActivity({ day_date: '', time_slot: '', activity_description: '' });
-        fetchActivities();
-        toast({
-          title: "Éxito",
-          description: "Actividad agregada correctamente"
-        });
-      }
-    } catch (error) {
-      console.error('Error adding activity:', error);
-      toast({
-        title: "Error",
-        description: "Error inesperado al agregar actividad",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
+    let updatedActivities: EventDay[];
+
+    if (existingDayIndex >= 0) {
+      // Agregar a día existente
+      updatedActivities = activities.map((day, index) => 
+        index === existingDayIndex 
+          ? { ...day, activities: [...day.activities, newActivityObj].sort((a, b) => a.time.localeCompare(b.time)) }
+          : day
+      );
+    } else {
+      // Crear nuevo día
+      const newDay: EventDay = {
+        date: newActivity.date,
+        activities: [newActivityObj]
+      };
+      updatedActivities = [...activities, newDay].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }
+
+    setActivities(updatedActivities);
+    onActivitiesChange?.(updatedActivities);
+    setNewActivity({ date: '', time: '', description: '' });
+    
+    toast({
+      title: "Éxito",
+      description: "Actividad agregada correctamente"
+    });
   };
 
-  const deleteActivity = async (activityId: string) => {
-    try {
-      const { error } = await supabase
-        .from('event_activities')
-        .delete()
-        .eq('id', activityId);
-
-      if (error) {
-        console.error('Error deleting activity:', error);
-        toast({
-          title: "Error",
-          description: "No se pudo eliminar la actividad",
-          variant: "destructive"
-        });
-      } else {
-        fetchActivities();
-        toast({
-          title: "Éxito",
-          description: "Actividad eliminada correctamente"
-        });
+  const deleteActivity = (dayIndex: number, activityIndex: number) => {
+    const updatedActivities = activities.map((day, dIndex) => {
+      if (dIndex === dayIndex) {
+        const updatedDay = {
+          ...day,
+          activities: day.activities.filter((_, aIndex) => aIndex !== activityIndex)
+        };
+        return updatedDay;
       }
-    } catch (error) {
-      console.error('Error deleting activity:', error);
-    }
-  };
+      return day;
+    }).filter(day => day.activities.length > 0); // Remover días sin actividades
 
-  const groupedActivities = activities.reduce((acc, activity) => {
-    const date = activity.day_date;
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(activity);
-    return acc;
-  }, {} as Record<string, DatabaseEventActivity[]>);
+    setActivities(updatedActivities);
+    onActivitiesChange?.(updatedActivities);
+    
+    toast({
+      title: "Éxito",
+      description: "Actividad eliminada correctamente"
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -146,16 +114,16 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
                 <label className="block text-sm font-medium mb-1">Fecha</label>
                 <Input
                   type="date"
-                  value={newActivity.day_date}
-                  onChange={(e) => setNewActivity(prev => ({ ...prev, day_date: e.target.value }))}
+                  value={newActivity.date}
+                  onChange={(e) => setNewActivity(prev => ({ ...prev, date: e.target.value }))}
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Hora</label>
                 <Input
                   type="time"
-                  value={newActivity.time_slot}
-                  onChange={(e) => setNewActivity(prev => ({ ...prev, time_slot: e.target.value }))}
+                  value={newActivity.time}
+                  onChange={(e) => setNewActivity(prev => ({ ...prev, time: e.target.value }))}
                 />
               </div>
             </div>
@@ -163,11 +131,11 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
               <label className="block text-sm font-medium mb-1">Descripción de la Actividad</label>
               <Textarea
                 placeholder="Describe la actividad..."
-                value={newActivity.activity_description}
-                onChange={(e) => setNewActivity(prev => ({ ...prev, activity_description: e.target.value }))}
+                value={newActivity.description}
+                onChange={(e) => setNewActivity(prev => ({ ...prev, description: e.target.value }))}
               />
             </div>
-            <Button onClick={addActivity} disabled={loading} className="w-full">
+            <Button onClick={addActivity} className="w-full">
               <Plus className="w-4 h-4 mr-2" />
               Agregar Actividad
             </Button>
@@ -175,13 +143,13 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
         </Card>
       )}
 
-      {Object.keys(groupedActivities).length > 0 ? (
+      {activities.length > 0 ? (
         <div className="space-y-4">
-          {Object.entries(groupedActivities).map(([date, dayActivities]) => (
-            <Card key={date}>
+          {activities.map((day, dayIndex) => (
+            <Card key={day.date}>
               <CardHeader>
                 <CardTitle className="text-base">
-                  {new Date(date).toLocaleDateString('es-ES', {
+                  {new Date(day.date).toLocaleDateString('es-ES', {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',
@@ -191,20 +159,20 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {dayActivities.map((activity) => (
+                  {day.activities.map((activity, activityIndex) => (
                     <div key={activity.id} className="flex items-start justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex-1">
                         <div className="flex items-center text-sm font-medium text-gray-600 mb-1">
                           <Clock className="w-4 h-4 mr-1" />
-                          {activity.time_slot}
+                          {activity.time}
                         </div>
-                        <p className="text-gray-800">{activity.activity_description}</p>
+                        <p className="text-gray-800">{activity.description}</p>
                       </div>
                       {canEdit && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => deleteActivity(activity.id)}
+                          onClick={() => deleteActivity(dayIndex, activityIndex)}
                           className="ml-2"
                         >
                           <Trash2 className="w-4 h-4" />
