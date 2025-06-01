@@ -2,15 +2,20 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import { Input } from '@/components/ui/input';
-import L from 'leaflet';
 
-// Fix for default markers in react-leaflet
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+// Dynamically import leaflet to avoid build issues
+let L: any;
+if (typeof window !== 'undefined') {
+  L = require('leaflet');
+  
+  // Fix for default markers in react-leaflet
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  });
+}
 
 interface LocationPickerProps {
   address: string;
@@ -19,7 +24,7 @@ interface LocationPickerProps {
 }
 
 function LocationMarker({ onLocationChange }: { onLocationChange?: (lat: number, lng: number) => void }) {
-  const [position, setPosition] = useState<L.LatLngExpression | null>(null);
+  const [position, setPosition] = useState<[number, number] | null>(null);
   
   const map = useMapEvents({
     click(e) {
@@ -66,7 +71,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       
       <div className="h-64 w-full rounded-lg overflow-hidden border">
         <MapContainer
-          center={[-33.4489, -70.6693] as L.LatLngExpression}
+          center={[-33.4489, -70.6693]}
           zoom={13}
           style={{ height: '100%', width: '100%' }}
         >
