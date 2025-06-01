@@ -1,6 +1,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "@/components/ui/toaster";
 import Index from "./pages/Index";
 import EventDetailPage from "./pages/EventDetailPage";
 import AuthPage from "./pages/AuthPage";
@@ -19,6 +20,7 @@ const App = () => (
         <Route path="/create-event" element={<CreateEventPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <Toaster />
     </BrowserRouter>
   </QueryClientProvider>
 );
