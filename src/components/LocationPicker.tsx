@@ -5,17 +5,21 @@ import { Input } from '@/components/ui/input';
 
 // Dynamically import leaflet to avoid build issues
 let L: any;
-if (typeof window !== 'undefined') {
-  L = require('leaflet');
-  
-  // Fix for default markers in react-leaflet
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  });
-}
+
+const initializeLeaflet = async () => {
+  if (typeof window !== 'undefined' && !L) {
+    const leaflet = await import('leaflet');
+    L = leaflet.default;
+    
+    // Fix for default markers in react-leaflet
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+      iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    });
+  }
+};
 
 interface LocationPickerProps {
   address: string;
@@ -53,6 +57,10 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   onAddressChange, 
   onLocationChange 
 }) => {
+  useEffect(() => {
+    initializeLeaflet();
+  }, []);
+
   return (
     <div className="space-y-4">
       <div>
