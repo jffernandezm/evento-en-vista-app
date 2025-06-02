@@ -38,6 +38,7 @@ export interface EventType {
   user_id?: string;
   latitude?: number;
   longitude?: number;
+  is_published?: boolean;
 }
 
 // Usar la estructura actual de la base de datos
@@ -59,6 +60,7 @@ export interface UserEvent {
   end_date: string | null;
   latitude: number | null;
   longitude: number | null;
+  is_published: boolean;
 }
 
 export interface UserProfile {

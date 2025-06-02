@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, CalendarDays, DollarSign, Info, Phone, Edit } from 'lucide-react';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import EventMap from '@/components/EventMap';
+import GoogleMap from '@/components/GoogleMap';
 import EventActivitiesManager from '@/components/EventActivitiesManager';
 
 const EventDetailPage: React.FC = () => {
@@ -167,11 +167,10 @@ const EventDetailPage: React.FC = () => {
             <EventActivitiesManager 
               eventId={id!} 
               canEdit={canEdit || false} 
-              initialActivities={eventActivities}
               onActivitiesChange={setEventActivities}
             />
             
-            <EventMap 
+            <GoogleMap 
               address={event.address}
               latitude={event.latitude}
               longitude={event.longitude}

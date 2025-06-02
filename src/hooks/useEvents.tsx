@@ -29,10 +29,6 @@ export const useEvents = () => {
         if (event.latitude && event.longitude && latitude && longitude) {
           const distanceKm = calculateDistance(latitude, longitude, event.latitude, event.longitude);
           distance = `A ${distanceKm.toFixed(1)}km de ti`;
-        } else {
-          // Usar distancia simulada si no tenemos coordenadas
-          const distances = ['A 2.5km de ti', 'A 1.2km de ti', 'A 850m de ti', 'A 3.1km de ti'];
-          distance = distances[Math.floor(Math.random() * distances.length)];
         }
 
         return {
@@ -51,6 +47,7 @@ export const useEvents = () => {
           user_id: event.user_id,
           latitude: event.latitude || undefined,
           longitude: event.longitude || undefined,
+          is_published: event.is_published,
         };
       });
     } catch (error) {
@@ -78,10 +75,6 @@ export const useEvents = () => {
       if (data.latitude && data.longitude && latitude && longitude) {
         const distanceKm = calculateDistance(latitude, longitude, data.latitude, data.longitude);
         distance = `A ${distanceKm.toFixed(1)}km de ti`;
-      } else {
-        // Usar distancia simulada
-        const distances = ['A 2.5km de ti', 'A 1.2km de ti', 'A 850m de ti', 'A 3.1km de ti'];
-        distance = distances[Math.floor(Math.random() * distances.length)];
       }
 
       return {
@@ -100,6 +93,7 @@ export const useEvents = () => {
         user_id: data.user_id,
         latitude: data.latitude || undefined,
         longitude: data.longitude || undefined,
+        is_published: data.is_published,
       };
     } catch (error) {
       console.error('Error fetching event:', error);

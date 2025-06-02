@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,10 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, DollarSign, Phone, MapPin, Save } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { ArrowLeft, DollarSign, Phone, Save, Eye, EyeOff } from 'lucide-react';
 import DateRangePicker from '@/components/DateRangePicker';
 import ImageUploader from '@/components/ImageUploader';
 import EventActivitiesManager from '@/components/EventActivitiesManager';
+import GoogleMap from '@/components/GoogleMap';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -36,6 +39,7 @@ const EditEventPage: React.FC = () => {
     category: 'upcoming',
     latitude: null as number | null,
     longitude: null as number | null,
+    is_published: true,
   });
 
   const [startDate, setStartDate] = useState<Date | undefined>();
@@ -93,6 +97,7 @@ const EditEventPage: React.FC = () => {
         category: data.category || 'upcoming',
         latitude: data.latitude || null,
         longitude: data.longitude || null,
+        is_published: data.is_published ?? true,
       });
 
       if (data.start_date) {
@@ -115,8 +120,17 @@ const EditEventPage: React.FC = () => {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleLocationChange = (lat: number, lng: number, address: string) => {
+    setFormData(prev => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng,
+      address: address
+    }));
   };
 
   const generateDatesString = () => {
@@ -145,26 +159,6 @@ const EditEventPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // Geocodificar la dirección si ha cambiado
-      let lat = formData.latitude;
-      let lng = formData.longitude;
-
-      if (formData.address && (!lat || !lng)) {
-        try {
-          const geocodeResponse = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address)}&limit=1`
-          );
-          const geocodeData = await geocodeResponse.json();
-          
-          if (geocodeData && geocodeData.length > 0) {
-            lat = parseFloat(geocodeData[0].lat);
-            lng = parseFloat(geocodeData[0].lon);
-          }
-        } catch (error) {
-          console.error('Error geocoding address:', error);
-        }
-      }
-
       const eventData = {
         title: formData.title,
         short_description: formData.shortDescription,
@@ -178,8 +172,9 @@ const EditEventPage: React.FC = () => {
         contact_info: formData.contactInfo,
         category: formData.category,
         updated_at: new Date().toISOString(),
-        latitude: lat,
-        longitude: lng,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        is_published: formData.is_published,
       };
 
       const { error } = await supabase
@@ -258,6 +253,23 @@ const EditEventPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    {formData.is_published ? (
+                      <Eye className="w-5 h-5 text-green-600" />
+                    ) : (
+                      <EyeOff className="w-5 h-5 text-gray-400" />
+                    )}
+                    <span className="font-medium">
+                      {formData.is_published ? 'Evento Publicado' : 'Evento No Publicado'}
+                    </span>
+                  </div>
+                  <Switch
+                    checked={formData.is_published}
+                    onCheckedChange={(checked) => handleInputChange('is_published', checked)}
+                  />
+                </div>
+
                 <div>
                   <label htmlFor="title" className="block text-sm font-medium mb-1">
                     Título del Evento *
@@ -329,23 +341,6 @@ const EditEventPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="address" className="block text-sm font-medium mb-1">
-                    Dirección del Evento
-                  </label>
-                  <div className="relative">
-                    <Input
-                      id="address"
-                      type="text"
-                      placeholder="Dirección completa del evento"
-                      value={formData.address}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
-                      className="pl-10"
-                    />
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  </div>
-                </div>
-
-                <div>
                   <label htmlFor="contactInfo" className="block text-sm font-medium mb-1">
                     Información de Contacto
                   </label>
@@ -401,6 +396,15 @@ const EditEventPage: React.FC = () => {
           </Card>
 
           <div className="space-y-6">
+            <GoogleMap
+              address={formData.address}
+              latitude={formData.latitude || undefined}
+              longitude={formData.longitude || undefined}
+              title={formData.title}
+              onLocationChange={handleLocationChange}
+              editable={true}
+            />
+            
             <EventActivitiesManager eventId={id!} canEdit={canEdit} />
           </div>
         </div>
