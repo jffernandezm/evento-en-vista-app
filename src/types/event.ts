@@ -1,4 +1,5 @@
 
+
 export interface EventActivity {
   id?: string;
   time: string;
@@ -70,3 +71,4 @@ export interface UserProfile {
   created_at: string;
   updated_at: string;
 }
+
