@@ -15,6 +15,7 @@ export const useEvents = () => {
       const { data, error } = await supabase
         .from('user_events')
         .select('*')
+        .eq('is_published', true) // Solo eventos publicados
         .order('created_at', { ascending: false });
 
       if (error) {
