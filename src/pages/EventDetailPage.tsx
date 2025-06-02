@@ -7,10 +7,10 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { EventType, EventDay } from '@/types/event';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CalendarDays, DollarSign, Info, Phone, Edit } from 'lucide-react';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import GoogleMap from '@/components/GoogleMap';
 import EventActivitiesManager from '@/components/EventActivitiesManager';
+import EventMediaManager from '@/components/EventMediaManager';
 
 const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -32,14 +32,11 @@ const EventDetailPage: React.FC = () => {
 
     setLoading(true);
     try {
-      // Primero intentar obtener de eventos de usuario
       const userEvent = await getEventById(id);
       if (userEvent) {
         setEvent(userEvent);
-        // Si es un evento de usuario, cargar actividades si existen
         setEventActivities(userEvent.activitiesByDay || []);
       } else {
-        // Si no se encuentra, buscar en mockEvents
         const { mockEvents } = await import('@/data/mockEvents');
         const mockEvent = mockEvents.find(e => e.id === id);
         if (mockEvent) {
@@ -82,41 +79,15 @@ const EventDetailPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
       <div className="relative">
-        {event.images && event.images.length > 0 ? (
-          <Carousel className="w-full">
-            <CarouselContent>
-              {event.images.map((img, index) => (
-                <CarouselItem key={index}>
-                  <img 
-                    src={img} 
-                    alt={`${event.title} - Imagen ${index + 1}`} 
-                    className="w-full h-64 md:h-96 object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/placeholder.svg';
-                    }}
-                  />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            {event.images.length > 1 && (
-              <>
-                <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/70 hover:bg-white" />
-                <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/70 hover:bg-white" />
-              </>
-            )}
-          </Carousel>
-        ) : (
-          <img 
-            src={event.imageUrl} 
-            alt={event.title} 
-            className="w-full h-64 md:h-96 object-cover"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = '/placeholder.svg';
-            }}
-          />
-        )}
+        <img 
+          src={event.imageUrl} 
+          alt={event.title} 
+          className="w-full h-64 md:h-96 object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = '/placeholder.svg';
+          }}
+        />
         <div className="absolute top-4 left-4">
           <Button asChild variant="outline" size="icon" className="rounded-full bg-white/70 hover:bg-white">
             <Link to="/">
@@ -163,6 +134,13 @@ const EventDetailPage: React.FC = () => {
               </h2>
               <p className="text-gray-700 leading-relaxed">{event.fullDescription}</p>
             </div>
+
+            {isUserEvent && (
+              <EventMediaManager 
+                eventId={id!} 
+                canEdit={canEdit || false} 
+              />
+            )}
 
             <EventActivitiesManager 
               eventId={id!} 

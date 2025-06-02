@@ -1,233 +1,271 @@
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation } from 'lucide-react';
-
-declare global {
-  interface Window {
-    google: any;
-    initMap: () => void;
-  }
-}
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MapPin, Search, Navigation, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface GoogleMapProps {
   address: string;
   latitude?: number;
   longitude?: number;
-  title: string;
-  onLocationChange?: (lat: number, lng: number, address: string) => void;
+  title?: string;
   editable?: boolean;
+  onLocationChange?: (lat: number, lng: number, address: string) => void;
 }
 
-const GoogleMap: React.FC<GoogleMapProps> = ({ 
-  address, 
-  latitude, 
-  longitude, 
-  title, 
-  onLocationChange,
-  editable = false 
+const GoogleMap: React.FC<GoogleMapProps> = ({
+  address,
+  latitude,
+  longitude,
+  title = 'Evento',
+  editable = false,
+  onLocationChange
 }) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<any>(null);
-  const marker = useRef<any>(null);
-  const [addressInput, setAddressInput] = useState(address);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  const [searchAddress, setSearchAddress] = useState(address);
+  const [currentLat, setCurrentLat] = useState(latitude);
+  const [currentLng, setCurrentLng] = useState(longitude);
+  const [loading, setLoading] = useState(true);
+  const [isGoogleMapsReady, setIsGoogleMapsReady] = useState(false);
+  const { toast } = useToast();
 
+  // Verificar si Google Maps está disponible
   useEffect(() => {
-    const loadGoogleMaps = () => {
+    const checkGoogleMaps = () => {
       if (window.google && window.google.maps) {
-        setIsLoaded(true);
-        return;
+        setIsGoogleMapsReady(true);
+      } else {
+        // Cargar Google Maps script si no está disponible
+        if (!document.querySelector('script[src*="maps.googleapis.com"]')) {
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBCamCz5Qm3ZTJZ8j7kF1H_MrGq8JZzQO8&libraries=places&language=es`;
+          script.async = true;
+          script.defer = true;
+          script.onload = () => setIsGoogleMapsReady(true);
+          script.onerror = () => {
+            console.error('Error loading Google Maps');
+            setLoading(false);
+          };
+          document.head.appendChild(script);
+        }
       }
-
-      // Check if script is already loading
-      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
-      if (existingScript) {
-        existingScript.addEventListener('load', () => setIsLoaded(true));
-        existingScript.addEventListener('error', () => setLoadError(true));
-        return;
-      }
-
-      // Load Google Maps API
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dO6BIpn86xIcOU&libraries=places&callback=initMap`;
-      script.async = true;
-      script.defer = true;
-      
-      window.initMap = () => {
-        console.log('Google Maps API loaded successfully');
-        setIsLoaded(true);
-      };
-      
-      script.onerror = () => {
-        console.error('Error loading Google Maps API');
-        setLoadError(true);
-      };
-      
-      document.head.appendChild(script);
     };
 
-    loadGoogleMaps();
+    checkGoogleMaps();
   }, []);
 
-  useEffect(() => {
-    if (isLoaded && mapContainer.current && !map.current) {
-      try {
-        initializeMap();
-      } catch (error) {
-        console.error('Error initializing map:', error);
-        setLoadError(true);
-      }
-    }
-  }, [isLoaded]);
-
-  useEffect(() => {
-    setAddressInput(address);
-  }, [address]);
-
-  const initializeMap = () => {
-    if (!window.google || !window.google.maps || !mapContainer.current) {
-      console.error('Google Maps not available');
-      return;
-    }
-
-    const initialLat = latitude || -33.4489; // Santiago por defecto
-    const initialLng = longitude || -70.6693;
+  const initializeMap = useCallback(() => {
+    if (!mapRef.current || !window.google?.maps) return;
 
     try {
-      // Crear el mapa
-      map.current = new window.google.maps.Map(mapContainer.current, {
-        center: { lat: initialLat, lng: initialLng },
-        zoom: 15,
+      // Coordenadas por defecto (centro de Chile)
+      const defaultLat = currentLat || -33.4489;
+      const defaultLng = currentLng || -70.6693;
+
+      const mapOptions: google.maps.MapOptions = {
+        center: { lat: defaultLat, lng: defaultLng },
+        zoom: currentLat && currentLng ? 15 : 10,
         mapTypeControl: true,
         streetViewControl: true,
         fullscreenControl: true,
-      });
+        zoomControl: true,
+        gestureHandling: 'auto',
+        styles: [
+          {
+            featureType: "poi",
+            elementType: "labels",
+            stylers: [{ visibility: "off" }]
+          }
+        ]
+      };
+
+      mapInstanceRef.current = new google.maps.Map(mapRef.current, mapOptions);
 
       // Crear marcador
-      marker.current = new window.google.maps.Marker({
-        position: { lat: initialLat, lng: initialLng },
-        map: map.current,
+      markerRef.current = new google.maps.Marker({
+        position: { lat: defaultLat, lng: defaultLng },
+        map: mapInstanceRef.current,
         title: title,
         draggable: editable,
+        animation: google.maps.Animation.DROP
       });
 
-      // Crear InfoWindow
-      const infoWindow = new window.google.maps.InfoWindow({
-        content: `
-          <div>
-            <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">${title}</h3>
-            <p style="margin: 0; color: #666;">${address}</p>
-            ${!editable ? `
-              <div style="margin-top: 8px;">
-                <button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}', '_blank')" 
-                        style="background: #4285f4; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 14px;">
-                  Cómo llegar
-                </button>
-              </div>
-            ` : ''}
-          </div>
-        `
-      });
+      // Configurar autocomplete si es editable
+      if (editable && searchInputRef.current) {
+        autocompleteRef.current = new google.maps.places.Autocomplete(
+          searchInputRef.current,
+          {
+            types: ['address'],
+            componentRestrictions: { country: 'CL' }
+          }
+        );
 
-      marker.current.addListener('click', () => {
-        infoWindow.open(map.current, marker.current);
-      });
-
-      // Si es editable, permitir arrastrar el marcador
-      if (editable) {
-        marker.current.addListener('dragend', (event: any) => {
-          const lat = event.latLng.lat();
-          const lng = event.latLng.lng();
-          
-          // Geocodificación inversa para obtener la dirección
-          const geocoder = new window.google.maps.Geocoder();
-          geocoder.geocode({ location: { lat, lng } }, (results: any[], status: string) => {
-            if (status === 'OK' && results[0]) {
-              const newAddress = results[0].formatted_address;
-              setAddressInput(newAddress);
-              onLocationChange?.(lat, lng, newAddress);
-            } else {
-              onLocationChange?.(lat, lng, addressInput);
-            }
-          });
+        autocompleteRef.current.addListener('place_changed', () => {
+          const place = autocompleteRef.current?.getPlace();
+          if (place?.geometry?.location) {
+            const lat = place.geometry.location.lat();
+            const lng = place.geometry.location.lng();
+            updateMapPosition(lat, lng, place.formatted_address || '');
+          }
         });
       }
 
-      // Geocodificar la dirección si no tenemos coordenadas exactas
-      if ((!latitude || !longitude) && address) {
-        geocodeAddress(address);
-      }
-    } catch (error) {
-      console.error('Error creating map:', error);
-      setLoadError(true);
-    }
-  };
-
-  const geocodeAddress = (addressToGeocode: string) => {
-    if (!window.google || !window.google.maps || !addressToGeocode) return;
-
-    try {
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ address: addressToGeocode }, (results: any[], status: string) => {
-        if (status === 'OK' && results[0] && map.current && marker.current) {
-          const location = results[0].geometry.location;
-          const lat = location.lat();
-          const lng = location.lng();
-          
-          map.current.setCenter({ lat, lng });
-          marker.current.setPosition({ lat, lng });
-          
-          if (editable && onLocationChange) {
-            onLocationChange(lat, lng, results[0].formatted_address);
+      // Listener para cuando se arrastra el marcador
+      if (editable && markerRef.current) {
+        markerRef.current.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+          if (event.latLng) {
+            const lat = event.latLng.lat();
+            const lng = event.latLng.lng();
+            
+            // Geocodificación inversa para obtener la dirección
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode(
+              { location: { lat, lng } },
+              (results, status) => {
+                if (status === 'OK' && results?.[0]) {
+                  const newAddress = results[0].formatted_address;
+                  setSearchAddress(newAddress);
+                  onLocationChange?.(lat, lng, newAddress);
+                } else {
+                  onLocationChange?.(lat, lng, `${lat}, ${lng}`);
+                }
+              }
+            );
           }
-        } else {
-          console.error('Geocoding failed:', status);
+        });
+      }
+
+      // Listener para clicks en el mapa
+      if (editable) {
+        mapInstanceRef.current.addListener('click', (event: google.maps.MapMouseEvent) => {
+          if (event.latLng) {
+            const lat = event.latLng.lat();
+            const lng = event.latLng.lng();
+            updateMapPosition(lat, lng);
+          }
+        });
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      setLoading(false);
+    }
+  }, [currentLat, currentLng, title, editable, onLocationChange]);
+
+  const updateMapPosition = useCallback((lat: number, lng: number, newAddress?: string) => {
+    if (!mapInstanceRef.current || !markerRef.current) return;
+
+    const position = { lat, lng };
+    
+    // Actualizar mapa y marcador
+    mapInstanceRef.current.setCenter(position);
+    mapInstanceRef.current.setZoom(15);
+    markerRef.current.setPosition(position);
+    
+    // Actualizar estado
+    setCurrentLat(lat);
+    setCurrentLng(lng);
+    
+    // Si no hay dirección, hacer geocodificación inversa
+    if (!newAddress) {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ location: position }, (results, status) => {
+        if (status === 'OK' && results?.[0]) {
+          const address = results[0].formatted_address;
+          setSearchAddress(address);
+          onLocationChange?.(lat, lng, address);
         }
       });
-    } catch (error) {
-      console.error('Error in geocoding:', error);
+    } else {
+      setSearchAddress(newAddress);
+      onLocationChange?.(lat, lng, newAddress);
     }
-  };
+  }, [onLocationChange]);
 
-  const handleAddressSubmit = () => {
-    if (addressInput.trim()) {
-      geocodeAddress(addressInput);
+  const searchLocation = useCallback(() => {
+    if (!searchAddress.trim()) {
+      toast({
+        title: "Error",
+        description: "Por favor ingresa una dirección para buscar",
+        variant: "destructive"
+      });
+      return;
     }
-  };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleAddressSubmit();
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ address: searchAddress }, (results, status) => {
+      if (status === 'OK' && results?.[0]?.geometry?.location) {
+        const location = results[0].geometry.location;
+        const lat = location.lat();
+        const lng = location.lng();
+        updateMapPosition(lat, lng, results[0].formatted_address);
+        
+        toast({
+          title: "Ubicación encontrada",
+          description: "La ubicación ha sido actualizada en el mapa"
+        });
+      } else {
+        toast({
+          title: "Ubicación no encontrada",
+          description: "No se pudo encontrar la dirección especificada",
+          variant: "destructive"
+        });
+      }
+    });
+  }, [searchAddress, updateMapPosition, toast]);
+
+  const getCurrentLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast({
+        title: "Error",
+        description: "La geolocalización no está disponible en tu navegador",
+        variant: "destructive"
+      });
+      return;
     }
-  };
 
-  if (loadError) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <MapPin className="w-5 h-5 mr-2" />
-            Ubicación
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 w-full rounded-lg border flex items-center justify-center bg-gray-50">
-            <div className="text-center">
-              <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p className="text-gray-600">Error al cargar el mapa</p>
-              <p className="text-sm text-gray-500">{address}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    setLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        updateMapPosition(lat, lng);
+        setLoading(false);
+        
+        toast({
+          title: "Ubicación actual",
+          description: "Se ha obtenido tu ubicación actual"
+        });
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        setLoading(false);
+        toast({
+          title: "Error de ubicación",
+          description: "No se pudo obtener tu ubicación actual",
+          variant: "destructive"
+        });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
-  }
+  }, [updateMapPosition, toast]);
 
-  if (!isLoaded) {
+  useEffect(() => {
+    if (isGoogleMapsReady) {
+      const timer = setTimeout(initializeMap, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isGoogleMapsReady, initializeMap]);
+
+  if (!isGoogleMapsReady) {
     return (
       <Card>
         <CardHeader>
@@ -237,11 +275,9 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-64 w-full rounded-lg border flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-              <p>Cargando mapa...</p>
-            </div>
+          <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <span className="ml-2 text-gray-600">Cargando mapa...</span>
           </div>
         </CardContent>
       </Card>
@@ -258,28 +294,58 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         {editable && (
-          <div className="flex gap-2">
-            <Input
-              value={addressInput}
-              onChange={(e) => setAddressInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ingresa una dirección"
-              className="flex-1"
-            />
-            <Button onClick={handleAddressSubmit} size="sm">
-              <Navigation className="w-4 h-4 mr-1" />
-              Buscar
-            </Button>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Buscar dirección..."
+                value={searchAddress}
+                onChange={(e) => setSearchAddress(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && searchLocation()}
+                className="flex-1"
+              />
+              <Button 
+                type="button" 
+                onClick={searchLocation}
+                disabled={loading}
+                variant="outline"
+              >
+                <Search className="w-4 h-4" />
+              </Button>
+              <Button 
+                type="button" 
+                onClick={getCurrentLocation}
+                disabled={loading}
+                variant="outline"
+              >
+                <Navigation className="w-4 h-4" />
+              </Button>
+            </div>
+            {editable && (
+              <p className="text-sm text-gray-600">
+                💡 Haz clic en el mapa o arrastra el marcador para seleccionar una ubicación
+              </p>
+            )}
           </div>
         )}
         
-        <div className="space-y-2">
-          <p className="text-sm text-gray-700">{addressInput}</p>
-          <div ref={mapContainer} className="h-64 w-full rounded-lg border" />
-          {editable && (
-            <p className="text-xs text-gray-500">
-              Puedes arrastrar el marcador para ajustar la ubicación exacta
-            </p>
+        <div className="relative">
+          <div 
+            ref={mapRef} 
+            className="w-full h-64 rounded-lg border"
+          />
+          {loading && (
+            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          )}
+        </div>
+        
+        <div className="text-sm text-gray-600">
+          <p><strong>Dirección:</strong> {searchAddress || address}</p>
+          {currentLat && currentLng && (
+            <p><strong>Coordenadas:</strong> {currentLat.toFixed(6)}, {currentLng.toFixed(6)}</p>
           )}
         </div>
       </CardContent>

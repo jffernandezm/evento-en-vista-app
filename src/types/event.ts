@@ -1,14 +1,26 @@
 
-
 export interface EventActivity {
   id?: string;
   time: string;
   description: string;
+  rich_description?: any; // JSON para texto enriquecido
+  image_url?: string; // Nueva imagen opcional para actividad
 }
 
 export interface EventDay {
   date: string;
   activities: EventActivity[];
+}
+
+// Tipo para los medios de eventos
+export interface EventMedia {
+  id: string;
+  event_id: string;
+  media_url: string;
+  media_type: 'image' | 'video';
+  display_order: number;
+  created_at: string;
+  updated_at: string;
 }
 
 // Tipo para las actividades en la base de datos
@@ -18,6 +30,8 @@ export interface DatabaseEventActivity {
   day_date: string;
   time_slot: string;
   activity_description: string;
+  rich_description?: any;
+  image_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -27,14 +41,15 @@ export interface EventType {
   title: string;
   shortDescription: string;
   fullDescription: string;
-  dates: string; // Could be a single date or a range
-  distance: string; // e.g., "A 5km de ti" (simulated for now)
-  price: string; // e.g., "Gratis" or "$10.000 CLP"
+  dates: string;
+  distance: string;
+  price: string;
   imageUrl: string;
-  images: string[]; // For event detail page
+  images: string[];
+  mediaFiles?: EventMedia[]; // Nueva propiedad para múltiples medios
   address: string;
   contactInfo: string;
-  activitiesByDay?: EventDay[]; // Optional for multi-day events
+  activitiesByDay?: EventDay[];
   category?: "ongoing" | "upcoming" | "past";
   user_id?: string;
   latitude?: number;
@@ -42,7 +57,6 @@ export interface EventType {
   is_published?: boolean;
 }
 
-// Usar la estructura actual de la base de datos
 export interface UserEvent {
   id: string;
   title: string;
@@ -71,4 +85,3 @@ export interface UserProfile {
   created_at: string;
   updated_at: string;
 }
-

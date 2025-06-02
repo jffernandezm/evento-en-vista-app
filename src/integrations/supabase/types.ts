@@ -16,6 +16,8 @@ export type Database = {
           day_date: string
           event_id: string
           id: string
+          image_url: string | null
+          rich_description: Json | null
           time_slot: string
           updated_at: string
         }
@@ -25,6 +27,8 @@ export type Database = {
           day_date: string
           event_id: string
           id?: string
+          image_url?: string | null
+          rich_description?: Json | null
           time_slot: string
           updated_at?: string
         }
@@ -34,12 +38,52 @@ export type Database = {
           day_date?: string
           event_id?: string
           id?: string
+          image_url?: string | null
+          rich_description?: Json | null
           time_slot?: string
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "event_activities_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "user_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_media: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          event_id: string
+          id: string
+          media_type: string
+          media_url: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          event_id: string
+          id?: string
+          media_type: string
+          media_url: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          event_id?: string
+          id?: string
+          media_type?: string
+          media_url?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_media_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "user_events"

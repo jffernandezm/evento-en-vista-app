@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +13,7 @@ import { ArrowLeft, DollarSign, Phone, Save, Eye, EyeOff } from 'lucide-react';
 import DateRangePicker from '@/components/DateRangePicker';
 import ImageUploader from '@/components/ImageUploader';
 import EventActivitiesManager from '@/components/EventActivitiesManager';
+import EventMediaManager from '@/components/EventMediaManager';
 import GoogleMap from '@/components/GoogleMap';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -404,6 +404,8 @@ const EditEventPage: React.FC = () => {
               onLocationChange={handleLocationChange}
               editable={true}
             />
+            
+            <EventMediaManager eventId={id!} canEdit={canEdit} />
             
             <EventActivitiesManager eventId={id!} canEdit={canEdit} />
           </div>
