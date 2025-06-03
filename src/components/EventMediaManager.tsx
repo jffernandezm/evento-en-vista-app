@@ -15,6 +15,17 @@ interface EventMediaManagerProps {
   onMediaChange?: (media: EventMedia[]) => void;
 }
 
+// Type for database response
+interface DatabaseEventMedia {
+  id: string;
+  event_id: string;
+  media_url: string;
+  media_type: string;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 const EventMediaManager: React.FC<EventMediaManagerProps> = ({ 
   eventId, 
   canEdit, 
@@ -42,8 +53,14 @@ const EventMediaManager: React.FC<EventMediaManagerProps> = ({
         return;
       }
 
-      setMedia(data || []);
-      onMediaChange?.(data || []);
+      // Transform database response to match our interface
+      const transformedMedia: EventMedia[] = (data as DatabaseEventMedia[] || []).map(item => ({
+        ...item,
+        media_type: item.media_type as 'image' | 'video'
+      }));
+
+      setMedia(transformedMedia);
+      onMediaChange?.(transformedMedia);
     } catch (error) {
       console.error('Error loading media:', error);
     } finally {

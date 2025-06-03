@@ -6,6 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapPin, Search, Navigation, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+// Extend Window interface to include google
+declare global {
+  interface Window {
+    google: typeof google;
+  }
+}
+
 interface GoogleMapProps {
   address: string;
   latitude?: number;
@@ -39,7 +46,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   // Verificar si Google Maps está disponible
   useEffect(() => {
     const checkGoogleMaps = () => {
-      if (window.google && window.google.maps) {
+      if (typeof window !== 'undefined' && window.google && window.google.maps) {
         setIsGoogleMapsReady(true);
       } else {
         // Cargar Google Maps script si no está disponible
