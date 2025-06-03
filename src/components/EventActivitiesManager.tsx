@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -155,14 +154,20 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({
     }
 
     try {
+      // Asegurar que la fecha se guarde correctamente sin problemas de zona horaria
+      const selectedDate = new Date(newActivity.date + 'T00:00:00');
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+
       const activityData = {
         event_id: eventId,
-        day_date: newActivity.date,
+        day_date: formattedDate,
         time_slot: newActivity.time,
         activity_description: newActivity.description,
         rich_description: { content: newActivity.description },
         image_url: newActivity.image_url || null
       };
+
+      console.log('Saving activity with date:', formattedDate, 'from input:', newActivity.date);
 
       const { error } = await supabase
         .from('event_activities')
@@ -347,7 +352,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({
                   <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
                     <CardTitle className="text-base flex items-center justify-between">
                       <span>
-                        {new Date(day.date).toLocaleDateString('es-ES', {
+                        {new Date(day.date + 'T00:00:00').toLocaleDateString('es-ES', {
                           weekday: 'long',
                           year: 'numeric',
                           month: 'long',

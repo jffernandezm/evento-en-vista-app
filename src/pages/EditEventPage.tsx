@@ -46,7 +46,7 @@ const EditEventPage: React.FC = () => {
   const [endDate, setEndDate] = useState<Date | undefined>();
 
   useEffect(() => {
-    if (id) {
+    if (id && user) {
       loadEvent();
     }
   }, [id, user, isAdmin]);
@@ -72,14 +72,8 @@ const EditEventPage: React.FC = () => {
         return;
       }
 
-      // Verificar permisos de manera más robusta
+      // Verificar que el usuario puede editar este evento
       const userCanEdit = user && (data.user_id === user.id || isAdmin);
-      console.log('Debug permisos en edición:', {
-        userId: user?.id,
-        eventUserId: data.user_id,
-        isAdmin,
-        userCanEdit
-      });
 
       setCanEdit(userCanEdit || false);
 

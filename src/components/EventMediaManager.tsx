@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Upload, X, Play, Image as ImageIcon, Film } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Film } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { EventMedia } from '@/types/event';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -176,6 +175,11 @@ const EventMediaManager: React.FC<EventMediaManagerProps> = ({
         <p className="text-center py-4">Cargando archivos...</p>
       </div>
     );
+  }
+
+  // No mostrar la sección si no hay media y el usuario no puede editar
+  if (media.length === 0 && !canEdit) {
+    return null;
   }
 
   return (

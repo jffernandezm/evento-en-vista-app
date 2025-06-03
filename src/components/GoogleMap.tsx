@@ -1,205 +1,224 @@
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin, Search, Navigation, Loader2, AlertTriangle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-
-// Extend Window interface to include google
-declare global {
-  interface Window {
-    google: typeof google;
-  }
-}
+import { MapPin, Search, AlertCircle } from 'lucide-react';
 
 interface GoogleMapProps {
-  address: string;
+  address?: string;
   latitude?: number;
   longitude?: number;
   title?: string;
-  editable?: boolean;
   onLocationChange?: (lat: number, lng: number, address: string) => void;
+  editable?: boolean;
+}
+
+declare global {
+  interface Window {
+    google: typeof google;
+    initGoogleMaps: () => void;
+  }
 }
 
 const GoogleMap: React.FC<GoogleMapProps> = ({
-  address,
+  address = '',
   latitude,
   longitude,
-  title = 'Evento',
-  editable = false,
-  onLocationChange
+  title = 'Ubicación del evento',
+  onLocationChange,
+  editable = false
 }) => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  
+  const [mapLoaded, setMapLoaded] = useState(false);
   const [searchAddress, setSearchAddress] = useState(address);
-  const [currentLat, setCurrentLat] = useState(latitude);
-  const [currentLng, setCurrentLng] = useState(longitude);
-  const [loading, setLoading] = useState(true);
-  const [isGoogleMapsReady, setIsGoogleMapsReady] = useState(false);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [marker, setMarker] = useState<google.maps.Marker | null>(null);
   const [hasError, setHasError] = useState(false);
-  const { toast } = useToast();
+  const mapRef = useRef<HTMLDivElement>(null);
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
 
-  // Verificar si Google Maps está disponible
+  // Coordenadas por defecto (Santiago, Chile)
+  const defaultCoords = { lat: -33.4489, lng: -70.6693 };
+
   useEffect(() => {
-    const checkGoogleMaps = () => {
-      if (typeof window !== 'undefined' && window.google && window.google.maps) {
-        setIsGoogleMapsReady(true);
-        setHasError(false);
-      } else {
-        // Por ahora no cargar Google Maps automáticamente para evitar errores de API key
-        setLoading(false);
-        setHasError(true);
-      }
-    };
-
-    checkGoogleMaps();
+    loadGoogleMaps();
   }, []);
 
-  const initializeMap = useCallback(() => {
-    if (!mapRef.current || !window.google?.maps) return;
+  useEffect(() => {
+    if (mapLoaded && map) {
+      updateMapLocation();
+    }
+  }, [mapLoaded, map, latitude, longitude, address]);
 
+  const loadGoogleMaps = () => {
     try {
-      // Coordenadas por defecto (centro de Chile)
-      const defaultLat = currentLat || -33.4489;
-      const defaultLng = currentLng || -70.6693;
+      if (window.google && window.google.maps) {
+        setMapLoaded(true);
+        setHasError(false);
+        return;
+      }
 
-      const mapOptions: google.maps.MapOptions = {
-        center: { lat: defaultLat, lng: defaultLng },
-        zoom: currentLat && currentLng ? 15 : 10,
-        mapTypeControl: true,
-        streetViewControl: true,
-        fullscreenControl: true,
-        zoomControl: true,
-        gestureHandling: 'auto',
-        styles: [
-          {
-            featureType: "poi",
-            elementType: "labels",
-            stylers: [{ visibility: "off" }]
-          }
-        ]
+      if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+        window.initGoogleMaps = () => {
+          setMapLoaded(true);
+          setHasError(false);
+        };
+        return;
+      }
+
+      window.initGoogleMaps = () => {
+        setMapLoaded(true);
+        setHasError(false);
       };
 
-      mapInstanceRef.current = new google.maps.Map(mapRef.current, mapOptions);
-
-      // Crear marcador
-      markerRef.current = new google.maps.Marker({
-        position: { lat: defaultLat, lng: defaultLng },
-        map: mapInstanceRef.current,
-        title: title,
-        draggable: editable,
-        animation: google.maps.Animation.DROP
-      });
-
-      // Configurar autocomplete si es editable
-      if (editable && searchInputRef.current) {
-        autocompleteRef.current = new google.maps.places.Autocomplete(
-          searchInputRef.current,
-          {
-            types: ['address'],
-            componentRestrictions: { country: 'CL' }
-          }
-        );
-
-        autocompleteRef.current.addListener('place_changed', () => {
-          const place = autocompleteRef.current?.getPlace();
-          if (place?.geometry?.location) {
-            const lat = place.geometry.location.lat();
-            const lng = place.geometry.location.lng();
-            updateMapPosition(lat, lng, place.formatted_address || '');
-          }
-        });
-      }
-
-      // Listener para cuando se arrastra el marcador
-      if (editable && markerRef.current) {
-        markerRef.current.addListener('dragend', (event: google.maps.MapMouseEvent) => {
-          if (event.latLng) {
-            const lat = event.latLng.lat();
-            const lng = event.latLng.lng();
-            
-            // Geocodificación inversa para obtener la dirección
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode(
-              { location: { lat, lng } },
-              (results, status) => {
-                if (status === 'OK' && results?.[0]) {
-                  const newAddress = results[0].formatted_address;
-                  setSearchAddress(newAddress);
-                  onLocationChange?.(lat, lng, newAddress);
-                } else {
-                  onLocationChange?.(lat, lng, `${lat}, ${lng}`);
-                }
-              }
-            );
-          }
-        });
-      }
-
-      // Listener para clicks en el mapa
-      if (editable) {
-        mapInstanceRef.current.addListener('click', (event: google.maps.MapMouseEvent) => {
-          if (event.latLng) {
-            const lat = event.latLng.lat();
-            const lng = event.latLng.lng();
-            updateMapPosition(lat, lng);
-          }
-        });
-      }
-
-      setLoading(false);
-      setHasError(false);
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places&callback=initGoogleMaps`;
+      script.async = true;
+      script.defer = true;
+      script.onerror = () => {
+        console.error('Error loading Google Maps');
+        setHasError(true);
+      };
+      document.head.appendChild(script);
     } catch (error) {
-      console.error('Error initializing map:', error);
-      setLoading(false);
+      console.error('Error initializing Google Maps:', error);
       setHasError(true);
     }
-  }, [currentLat, currentLng, title, editable, onLocationChange]);
+  };
 
-  const updateMapPosition = useCallback((lat: number, lng: number, newAddress?: string) => {
-    if (!mapInstanceRef.current || !markerRef.current) return;
+  const initializeMap = () => {
+    if (!mapRef.current || !window.google) return;
 
-    const position = { lat, lng };
-    
-    // Actualizar mapa y marcador
-    mapInstanceRef.current.setCenter(position);
-    mapInstanceRef.current.setZoom(15);
-    markerRef.current.setPosition(position);
-    
-    // Actualizar estado
-    setCurrentLat(lat);
-    setCurrentLng(lng);
-    
-    // Si no hay dirección, hacer geocodificación inversa
-    if (!newAddress && window.google?.maps) {
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ location: position }, (results, status) => {
-        if (status === 'OK' && results?.[0]) {
-          const address = results[0].formatted_address;
-          setSearchAddress(address);
-          onLocationChange?.(lat, lng, address);
-        }
+    try {
+      const coords = (latitude && longitude) ? { lat: latitude, lng: longitude } : defaultCoords;
+      
+      const newMap = new google.maps.Map(mapRef.current, {
+        center: coords,
+        zoom: 15,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
       });
-    } else if (newAddress) {
-      setSearchAddress(newAddress);
-      onLocationChange?.(lat, lng, newAddress);
+
+      const newMarker = new google.maps.Marker({
+        position: coords,
+        map: newMap,
+        title: title,
+        draggable: editable,
+      });
+
+      if (editable) {
+        newMarker.addListener('dragend', () => {
+          const position = newMarker.getPosition();
+          if (position && onLocationChange) {
+            reverseGeocode(position.lat(), position.lng());
+          }
+        });
+
+        newMap.addListener('click', (event: google.maps.MapMouseEvent) => {
+          if (event.latLng) {
+            newMarker.setPosition(event.latLng);
+            reverseGeocode(event.latLng.lat(), event.latLng.lng());
+          }
+        });
+      }
+
+      setMap(newMap);
+      setMarker(newMarker);
+      geocoderRef.current = new google.maps.Geocoder();
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      setHasError(true);
     }
-  }, [onLocationChange]);
+  };
+
+  const updateMapLocation = () => {
+    if (!map || !marker || !window.google) return;
+
+    try {
+      const coords = (latitude && longitude) ? { lat: latitude, lng: longitude } : defaultCoords;
+      
+      map.setCenter(coords);
+      marker.setPosition(coords);
+      
+      if (latitude && longitude) {
+        map.setZoom(15);
+      }
+    } catch (error) {
+      console.error('Error updating map location:', error);
+    }
+  };
+
+  const reverseGeocode = async (lat: number, lng: number) => {
+    if (!geocoderRef.current || !onLocationChange) return;
+
+    try {
+      const results = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+        geocoderRef.current!.geocode(
+          { location: { lat, lng } },
+          (results, status) => {
+            if (status === 'OK' && results) {
+              resolve(results);
+            } else {
+              reject(new Error('Geocoding failed'));
+            }
+          }
+        );
+      });
+
+      if (results && results[0]) {
+        const newAddress = results[0].formatted_address;
+        setSearchAddress(newAddress);
+        onLocationChange(lat, lng, newAddress);
+      }
+    } catch (error) {
+      console.error('Error in reverse geocoding:', error);
+      onLocationChange(lat, lng, `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+    }
+  };
+
+  const searchLocation = async () => {
+    if (!geocoderRef.current || !searchAddress.trim()) return;
+
+    try {
+      const results = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+        geocoderRef.current!.geocode(
+          { address: searchAddress },
+          (results, status) => {
+            if (status === 'OK' && results) {
+              resolve(results);
+            } else {
+              reject(new Error('Geocoding failed'));
+            }
+          }
+        );
+      });
+
+      if (results && results[0] && map && marker) {
+        const location = results[0].geometry.location;
+        const lat = location.lat();
+        const lng = location.lng();
+        
+        map.setCenter({ lat, lng });
+        map.setZoom(15);
+        marker.setPosition({ lat, lng });
+        
+        if (onLocationChange) {
+          onLocationChange(lat, lng, results[0].formatted_address);
+        }
+      }
+    } catch (error) {
+      console.error('Error searching location:', error);
+    }
+  };
 
   useEffect(() => {
-    if (isGoogleMapsReady) {
-      const timer = setTimeout(initializeMap, 100);
-      return () => clearTimeout(timer);
+    if (mapLoaded && !map) {
+      initializeMap();
     }
-  }, [isGoogleMapsReady, initializeMap]);
+  }, [mapLoaded]);
 
-  // Si hay error con Google Maps, mostrar información básica
-  if (hasError || !isGoogleMapsReady) {
+  if (hasError) {
     return (
       <Card>
         <CardHeader>
@@ -209,42 +228,12 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {hasError && (
-            <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
-              <div className="text-center">
-                <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-                <p className="text-gray-600 mb-2">Mapa no disponible</p>
-                <p className="text-sm text-gray-500">
-                  Configuración de Google Maps requerida
-                </p>
-              </div>
+          <div className="flex items-center justify-center p-8 bg-gray-100 rounded-lg">
+            <div className="text-center">
+              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-gray-600">No se pudo cargar el mapa</p>
+              <p className="text-sm text-gray-500 mt-1">{address || 'Ubicación no disponible'}</p>
             </div>
-          )}
-          
-          <div className="mt-4 space-y-2">
-            <div className="text-sm text-gray-600">
-              <p><strong>Dirección:</strong> {searchAddress || address}</p>
-              {currentLat && currentLng && (
-                <p><strong>Coordenadas:</strong> {currentLat.toFixed(6)}, {currentLng.toFixed(6)}</p>
-              )}
-            </div>
-            
-            {editable && (
-              <div className="space-y-2">
-                <Input
-                  type="text"
-                  placeholder="Dirección del evento"
-                  value={searchAddress}
-                  onChange={(e) => {
-                    setSearchAddress(e.target.value);
-                    onLocationChange?.(currentLat || 0, currentLng || 0, e.target.value);
-                  }}
-                />
-                <p className="text-xs text-gray-500">
-                  💡 Ingresa la dirección manualmente mientras se configura Google Maps
-                </p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -261,41 +250,39 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         {editable && (
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <Input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Buscar dirección..."
-                value={searchAddress}
-                onChange={(e) => setSearchAddress(e.target.value)}
-                className="flex-1"
-              />
-            </div>
-            <p className="text-sm text-gray-600">
-              💡 Haz clic en el mapa o arrastra el marcador para seleccionar una ubicación
-            </p>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Buscar dirección..."
+              value={searchAddress}
+              onChange={(e) => setSearchAddress(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && searchLocation()}
+            />
+            <Button onClick={searchLocation} size="icon" variant="outline">
+              <Search className="w-4 h-4" />
+            </Button>
           </div>
         )}
         
         <div className="relative">
           <div 
             ref={mapRef} 
-            className="w-full h-64 rounded-lg border"
-          />
-          {loading && (
-            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            </div>
-          )}
+            className="w-full h-64 bg-gray-200 rounded-lg"
+            style={{ minHeight: '256px' }}
+          >
+            {!mapLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <p className="text-gray-600">Cargando mapa...</p>
+              </div>
+            )}
+          </div>
         </div>
         
-        <div className="text-sm text-gray-600">
-          <p><strong>Dirección:</strong> {searchAddress || address}</p>
-          {currentLat && currentLng && (
-            <p><strong>Coordenadas:</strong> {currentLat.toFixed(6)}, {currentLng.toFixed(6)}</p>
-          )}
-        </div>
+        {address && (
+          <p className="text-sm text-gray-600 mt-2">
+            <MapPin className="w-4 h-4 inline mr-1" />
+            {address}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

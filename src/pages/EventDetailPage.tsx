@@ -66,16 +66,9 @@ const EventDetailPage: React.FC = () => {
     );
   }
 
-  // Corregir la lógica de permisos para asegurar que los propietarios puedan editar
+  // Verificar permisos: el usuario debe ser el creador del evento o admin
   const canEdit = user && event.user_id && (event.user_id === user.id || isAdmin);
   const isUserEvent = !!event.user_id;
-
-  console.log('Debug permisos:', {
-    user: user?.id,
-    eventUserId: event.user_id,
-    isAdmin,
-    canEdit
-  });
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
