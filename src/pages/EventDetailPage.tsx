@@ -37,14 +37,7 @@ const EventDetailPage: React.FC = () => {
         setEvent(userEvent);
         setEventActivities(userEvent.activitiesByDay || []);
       } else {
-        const { mockEvents } = await import('@/data/mockEvents');
-        const mockEvent = mockEvents.find(e => e.id === id);
-        if (mockEvent) {
-          setEvent(mockEvent);
-          setEventActivities(mockEvent.activitiesByDay || []);
-        } else {
-          setEvent(null);
-        }
+        setEvent(null);
       }
     } catch (error) {
       console.error('Error loading event:', error);
@@ -73,8 +66,16 @@ const EventDetailPage: React.FC = () => {
     );
   }
 
+  // Corregir la lógica de permisos para asegurar que los propietarios puedan editar
   const canEdit = user && event.user_id && (event.user_id === user.id || isAdmin);
   const isUserEvent = !!event.user_id;
+
+  console.log('Debug permisos:', {
+    user: user?.id,
+    eventUserId: event.user_id,
+    isAdmin,
+    canEdit
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">

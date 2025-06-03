@@ -3,7 +3,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin, Search, Navigation, Loader2 } from 'lucide-react';
+import { MapPin, Search, Navigation, Loader2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 // Extend Window interface to include google
@@ -41,6 +41,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   const [currentLng, setCurrentLng] = useState(longitude);
   const [loading, setLoading] = useState(true);
   const [isGoogleMapsReady, setIsGoogleMapsReady] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const { toast } = useToast();
 
   // Verificar si Google Maps está disponible
@@ -48,20 +49,11 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     const checkGoogleMaps = () => {
       if (typeof window !== 'undefined' && window.google && window.google.maps) {
         setIsGoogleMapsReady(true);
+        setHasError(false);
       } else {
-        // Cargar Google Maps script si no está disponible
-        if (!document.querySelector('script[src*="maps.googleapis.com"]')) {
-          const script = document.createElement('script');
-          script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBCamCz5Qm3ZTJZ8j7kF1H_MrGq8JZzQO8&libraries=places&language=es`;
-          script.async = true;
-          script.defer = true;
-          script.onload = () => setIsGoogleMapsReady(true);
-          script.onerror = () => {
-            console.error('Error loading Google Maps');
-            setLoading(false);
-          };
-          document.head.appendChild(script);
-        }
+        // Por ahora no cargar Google Maps automáticamente para evitar errores de API key
+        setLoading(false);
+        setHasError(true);
       }
     };
 
@@ -161,9 +153,11 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
       }
 
       setLoading(false);
+      setHasError(false);
     } catch (error) {
       console.error('Error initializing map:', error);
       setLoading(false);
+      setHasError(true);
     }
   }, [currentLat, currentLng, title, editable, onLocationChange]);
 
@@ -182,7 +176,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     setCurrentLng(lng);
     
     // Si no hay dirección, hacer geocodificación inversa
-    if (!newAddress) {
+    if (!newAddress && window.google?.maps) {
       const geocoder = new google.maps.Geocoder();
       geocoder.geocode({ location: position }, (results, status) => {
         if (status === 'OK' && results?.[0]) {
@@ -191,79 +185,11 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
           onLocationChange?.(lat, lng, address);
         }
       });
-    } else {
+    } else if (newAddress) {
       setSearchAddress(newAddress);
       onLocationChange?.(lat, lng, newAddress);
     }
   }, [onLocationChange]);
-
-  const searchLocation = useCallback(() => {
-    if (!searchAddress.trim()) {
-      toast({
-        title: "Error",
-        description: "Por favor ingresa una dirección para buscar",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ address: searchAddress }, (results, status) => {
-      if (status === 'OK' && results?.[0]?.geometry?.location) {
-        const location = results[0].geometry.location;
-        const lat = location.lat();
-        const lng = location.lng();
-        updateMapPosition(lat, lng, results[0].formatted_address);
-        
-        toast({
-          title: "Ubicación encontrada",
-          description: "La ubicación ha sido actualizada en el mapa"
-        });
-      } else {
-        toast({
-          title: "Ubicación no encontrada",
-          description: "No se pudo encontrar la dirección especificada",
-          variant: "destructive"
-        });
-      }
-    });
-  }, [searchAddress, updateMapPosition, toast]);
-
-  const getCurrentLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      toast({
-        title: "Error",
-        description: "La geolocalización no está disponible en tu navegador",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        updateMapPosition(lat, lng);
-        setLoading(false);
-        
-        toast({
-          title: "Ubicación actual",
-          description: "Se ha obtenido tu ubicación actual"
-        });
-      },
-      (error) => {
-        console.error('Error getting location:', error);
-        setLoading(false);
-        toast({
-          title: "Error de ubicación",
-          description: "No se pudo obtener tu ubicación actual",
-          variant: "destructive"
-        });
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
-  }, [updateMapPosition, toast]);
 
   useEffect(() => {
     if (isGoogleMapsReady) {
@@ -272,7 +198,8 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     }
   }, [isGoogleMapsReady, initializeMap]);
 
-  if (!isGoogleMapsReady) {
+  // Si hay error con Google Maps, mostrar información básica
+  if (hasError || !isGoogleMapsReady) {
     return (
       <Card>
         <CardHeader>
@@ -282,9 +209,42 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-            <span className="ml-2 text-gray-600">Cargando mapa...</span>
+          {hasError && (
+            <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300">
+              <div className="text-center">
+                <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+                <p className="text-gray-600 mb-2">Mapa no disponible</p>
+                <p className="text-sm text-gray-500">
+                  Configuración de Google Maps requerida
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <div className="mt-4 space-y-2">
+            <div className="text-sm text-gray-600">
+              <p><strong>Dirección:</strong> {searchAddress || address}</p>
+              {currentLat && currentLng && (
+                <p><strong>Coordenadas:</strong> {currentLat.toFixed(6)}, {currentLng.toFixed(6)}</p>
+              )}
+            </div>
+            
+            {editable && (
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  placeholder="Dirección del evento"
+                  value={searchAddress}
+                  onChange={(e) => {
+                    setSearchAddress(e.target.value);
+                    onLocationChange?.(currentLat || 0, currentLng || 0, e.target.value);
+                  }}
+                />
+                <p className="text-xs text-gray-500">
+                  💡 Ingresa la dirección manualmente mientras se configura Google Maps
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -309,31 +269,12 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
                 placeholder="Buscar dirección..."
                 value={searchAddress}
                 onChange={(e) => setSearchAddress(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && searchLocation()}
                 className="flex-1"
               />
-              <Button 
-                type="button" 
-                onClick={searchLocation}
-                disabled={loading}
-                variant="outline"
-              >
-                <Search className="w-4 h-4" />
-              </Button>
-              <Button 
-                type="button" 
-                onClick={getCurrentLocation}
-                disabled={loading}
-                variant="outline"
-              >
-                <Navigation className="w-4 h-4" />
-              </Button>
             </div>
-            {editable && (
-              <p className="text-sm text-gray-600">
-                💡 Haz clic en el mapa o arrastra el marcador para seleccionar una ubicación
-              </p>
-            )}
+            <p className="text-sm text-gray-600">
+              💡 Haz clic en el mapa o arrastra el marcador para seleccionar una ubicación
+            </p>
           </div>
         )}
         

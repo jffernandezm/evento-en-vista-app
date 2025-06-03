@@ -72,8 +72,15 @@ const EditEventPage: React.FC = () => {
         return;
       }
 
-      // Verificar permisos
+      // Verificar permisos de manera más robusta
       const userCanEdit = user && (data.user_id === user.id || isAdmin);
+      console.log('Debug permisos en edición:', {
+        userId: user?.id,
+        eventUserId: data.user_id,
+        isAdmin,
+        userCanEdit
+      });
+
       setCanEdit(userCanEdit || false);
 
       if (!userCanEdit) {

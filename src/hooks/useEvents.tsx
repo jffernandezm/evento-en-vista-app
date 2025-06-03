@@ -1,7 +1,6 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { mockEvents } from '@/data/mockEvents';
 import { EventType, UserEvent } from '@/types/event';
 import { useGeolocation } from '@/hooks/useGeolocation';
 
@@ -113,8 +112,9 @@ export const useEvents = () => {
     loadEvents();
   }, [latitude, longitude]);
 
+  // Solo devolver eventos de la base de datos
   const getAllEvents = (): EventType[] => {
-    return [...mockEvents, ...userEvents];
+    return userEvents;
   };
 
   return {
