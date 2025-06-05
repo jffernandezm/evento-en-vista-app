@@ -52,12 +52,12 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({
       }
 
       const groupedActivities = data.reduce((acc: EventDay[], activity: DatabaseEventActivity) => {
-        const existingDay = acc.find(day => day.date === activity.day_date);
+        const existingDay = acc.find(day => day.day_date === activity.day_date);
         
         const activityObj: EventActivity = {
           id: activity.id,
-          time: activity.time_slot,
-          description: activity.activity_description,
+          time_slot: activity.time_slot,
+          activity_description: activity.activity_description,
           rich_description: activity.rich_description,
           image_url: activity.image_url || undefined
         };
@@ -66,7 +66,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({
           existingDay.activities.push(activityObj);
         } else {
           acc.push({
-            date: activity.day_date,
+            day_date: activity.day_date,
             activities: [activityObj]
           });
         }
@@ -154,8 +154,8 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({
     }
 
     try {
-      // Asegurar que la fecha se guarde correctamente sin problemas de zona horaria
-      const selectedDate = new Date(newActivity.date + 'T00:00:00');
+      // Fix date handling to avoid timezone issues
+      const selectedDate = new Date(newActivity.date + 'T12:00:00');
       const formattedDate = selectedDate.toISOString().split('T')[0];
 
       const activityData = {
@@ -343,16 +343,16 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({
       {activities.length > 0 ? (
         <div className="space-y-2">
           {activities.map((day) => (
-            <Card key={day.date}>
+            <Card key={day.day_date}>
               <Collapsible 
-                open={expandedDays.has(day.date)} 
-                onOpenChange={() => toggleDay(day.date)}
+                open={expandedDays.has(day.day_date)} 
+                onOpenChange={() => toggleDay(day.day_date)}
               >
                 <CollapsibleTrigger asChild>
                   <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
                     <CardTitle className="text-base flex items-center justify-between">
                       <span>
-                        {new Date(day.date + 'T00:00:00').toLocaleDateString('es-ES', {
+                        {new Date(day.day_date + 'T12:00:00').toLocaleDateString('es-ES', {
                           weekday: 'long',
                           year: 'numeric',
                           month: 'long',
@@ -362,7 +362,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({
                           ({day.activities.length} actividad{day.activities.length !== 1 ? 'es' : ''})
                         </span>
                       </span>
-                      {expandedDays.has(day.date) ? (
+                      {expandedDays.has(day.day_date) ? (
                         <ChevronDown className="h-4 w-4" />
                       ) : (
                         <ChevronRight className="h-4 w-4" />
@@ -378,10 +378,10 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({
                           <div className="flex-1">
                             <div className="flex items-center text-sm font-medium text-gray-600 mb-2">
                               <Clock className="w-4 h-4 mr-1" />
-                              {activity.time}
+                              {activity.time_slot}
                             </div>
                             <RichTextDisplay 
-                              content={activity.description} 
+                              content={activity.activity_description} 
                               className="text-gray-800 mb-2"
                             />
                             {activity.image_url && (

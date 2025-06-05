@@ -1,9 +1,15 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { MapPin, Search, AlertCircle } from 'lucide-react';
+
+declare global {
+  interface Window {
+    google?: typeof google;
+    initGoogleMaps?: () => void;
+  }
+}
 
 interface GoogleMapProps {
   address?: string;

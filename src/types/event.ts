@@ -43,14 +43,34 @@ export interface UserEvent {
   updated_at: string;
 }
 
-export interface EventDay {
+export interface UserProfile {
   id: string;
-  event_id: string;
+  email?: string;
+  full_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EventDay {
+  id?: string;
+  event_id?: string;
   day_date: string;
   activities: EventActivity[];
 }
 
 export interface EventActivity {
+  id?: string;
+  event_id?: string;
+  day_date?: string;
+  time_slot: string;
+  activity_description: string;
+  rich_description?: any;
+  image_url?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DatabaseEventActivity {
   id: string;
   event_id: string;
   day_date: string;
