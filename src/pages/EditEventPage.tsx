@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -5,7 +6,6 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -15,6 +15,7 @@ import ImageUploader from '@/components/ImageUploader';
 import EventActivitiesManager from '@/components/EventActivitiesManager';
 import EventMediaManager from '@/components/EventMediaManager';
 import GoogleMap from '@/components/GoogleMap';
+import RichTextEditor from '@/components/RichTextEditor';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -126,6 +127,7 @@ const EditEventPage: React.FC = () => {
   };
 
   const handleLocationChange = (lat: number, lng: number, address: string) => {
+    console.log('Location changed:', lat, lng, address);
     setFormData(prev => ({
       ...prev,
       latitude: lat,
@@ -303,12 +305,10 @@ const EditEventPage: React.FC = () => {
                   <label htmlFor="fullDescription" className="block text-sm font-medium mb-1">
                     Descripción Completa
                   </label>
-                  <Textarea
-                    id="fullDescription"
-                    placeholder="Descripción detallada del evento..."
+                  <RichTextEditor
                     value={formData.fullDescription}
-                    onChange={(e) => handleInputChange('fullDescription', e.target.value)}
-                    rows={4}
+                    onChange={(value) => handleInputChange('fullDescription', value)}
+                    placeholder="Descripción detallada del evento..."
                   />
                 </div>
 

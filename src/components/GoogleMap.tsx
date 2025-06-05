@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,50 +41,56 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   const defaultCoords = { lat: -33.4489, lng: -70.6693 };
 
   useEffect(() => {
+    setSearchAddress(address);
+  }, [address]);
+
+  useEffect(() => {
     const loadGoogleMaps = () => {
       try {
-        // Si ya existe Google Maps API
         if (window.google?.maps) {
+          console.log('Google Maps already loaded');
           setMapLoaded(true);
           setHasError(false);
           return;
         }
 
-        // Si ya hay un script cargándose
         if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+          console.log('Google Maps script already exists, waiting for load...');
           const checkLoaded = setInterval(() => {
             if (window.google?.maps) {
+              console.log('Google Maps loaded successfully');
               setMapLoaded(true);
               setHasError(false);
               clearInterval(checkLoaded);
             }
           }, 100);
           
-          // Timeout después de 10 segundos
           setTimeout(() => {
             clearInterval(checkLoaded);
             if (!window.google?.maps) {
+              console.error('Google Maps failed to load after timeout');
               setHasError(true);
             }
-          }, 10000);
+          }, 15000);
           return;
         }
 
-        // Crear callback global
+        console.log('Loading Google Maps script...');
         window.initGoogleMaps = () => {
+          console.log('Google Maps initialized via callback');
           setMapLoaded(true);
           setHasError(false);
         };
 
-        // Cargar script
         const script = document.createElement('script');
         script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dOWTgkNLEG8s5g&libraries=places&callback=initGoogleMaps`;
         script.async = true;
         script.defer = true;
-        script.onerror = () => {
-          console.error('Error loading Google Maps');
+        script.onerror = (error) => {
+          console.error('Error loading Google Maps script:', error);
           setHasError(true);
         };
+        
         document.head.appendChild(script);
       } catch (error) {
         console.error('Error initializing Google Maps:', error);
@@ -96,21 +103,27 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
   useEffect(() => {
     if (mapLoaded && !map && mapRef.current && window.google?.maps) {
+      console.log('Initializing map...');
       initializeMap();
     }
   }, [mapLoaded]);
 
   useEffect(() => {
-    if (map && marker && window.google?.maps) {
+    if (map && marker && (latitude !== undefined && longitude !== undefined)) {
+      console.log('Updating map location:', latitude, longitude);
       updateMapLocation();
     }
-  }, [latitude, longitude, address]);
+  }, [latitude, longitude, map, marker]);
 
   const initializeMap = () => {
-    if (!mapRef.current || !window.google?.maps) return;
+    if (!mapRef.current || !window.google?.maps) {
+      console.error('Map container or Google Maps not available');
+      return;
+    }
 
     try {
       const coords = (latitude && longitude) ? { lat: latitude, lng: longitude } : defaultCoords;
+      console.log('Creating map with coords:', coords);
       
       const newMap = new google.maps.Map(mapRef.current, {
         center: coords,
@@ -131,12 +144,14 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
         newMarker.addListener('dragend', () => {
           const position = newMarker.getPosition();
           if (position && onLocationChange) {
+            console.log('Marker dragged to:', position.lat(), position.lng());
             reverseGeocode(position.lat(), position.lng());
           }
         });
 
         newMap.addListener('click', (event: google.maps.MapMouseEvent) => {
           if (event.latLng) {
+            console.log('Map clicked at:', event.latLng.lat(), event.latLng.lng());
             newMarker.setPosition(event.latLng);
             reverseGeocode(event.latLng.lat(), event.latLng.lng());
           }
@@ -147,6 +162,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
       setMarker(newMarker);
       geocoderRef.current = new google.maps.Geocoder();
       setHasError(false);
+      console.log('Map initialized successfully');
     } catch (error) {
       console.error('Error initializing map:', error);
       setHasError(true);
@@ -158,6 +174,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
     try {
       const coords = (latitude && longitude) ? { lat: latitude, lng: longitude } : defaultCoords;
+      console.log('Updating map to coords:', coords);
       
       map.setCenter(coords);
       marker.setPosition(coords);
@@ -174,14 +191,15 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     if (!geocoderRef.current || !onLocationChange) return;
 
     try {
+      console.log('Reverse geocoding:', lat, lng);
       const results = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
         geocoderRef.current!.geocode(
           { location: { lat, lng } },
           (results, status) => {
-            if (status === 'OK' && results) {
+            if (status === 'OK' && results && results.length > 0) {
               resolve(results);
             } else {
-              reject(new Error('Geocoding failed'));
+              reject(new Error(`Geocoding failed: ${status}`));
             }
           }
         );
@@ -189,12 +207,15 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
 
       if (results && results[0]) {
         const newAddress = results[0].formatted_address;
+        console.log('Reverse geocoded address:', newAddress);
         setSearchAddress(newAddress);
         onLocationChange(lat, lng, newAddress);
       }
     } catch (error) {
       console.error('Error in reverse geocoding:', error);
-      onLocationChange(lat, lng, `${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+      const coordsAddress = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      setSearchAddress(coordsAddress);
+      onLocationChange(lat, lng, coordsAddress);
     }
   };
 
@@ -202,14 +223,15 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     if (!geocoderRef.current || !searchAddress.trim()) return;
 
     try {
+      console.log('Searching for address:', searchAddress);
       const results = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
         geocoderRef.current!.geocode(
           { address: searchAddress },
           (results, status) => {
-            if (status === 'OK' && results) {
+            if (status === 'OK' && results && results.length > 0) {
               resolve(results);
             } else {
-              reject(new Error('Geocoding failed'));
+              reject(new Error(`Geocoding failed: ${status}`));
             }
           }
         );
@@ -220,6 +242,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
         const lat = location.lat();
         const lng = location.lng();
         
+        console.log('Found location:', lat, lng);
         map.setCenter({ lat, lng });
         map.setZoom(15);
         marker.setPosition({ lat, lng });
@@ -245,8 +268,8 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
         <CardContent>
           <div className="flex items-center justify-center p-8 bg-gray-100 rounded-lg">
             <div className="text-center">
-              <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p className="text-gray-600">Mapa no disponible</p>
+              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-red-400" />
+              <p className="text-gray-600">Error al cargar el mapa</p>
               {address && (
                 <p className="text-sm text-gray-500 mt-1">{address}</p>
               )}
@@ -295,6 +318,11 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
               </div>
             )}
           </div>
+          {editable && (
+            <p className="text-xs text-gray-500 mt-2">
+              Haz clic en el mapa o arrastra el marcador para seleccionar la ubicación exacta
+            </p>
+          )}
         </div>
         
         {address && (

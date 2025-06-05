@@ -5,12 +5,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, DollarSign, Phone, MapPin } from 'lucide-react';
 import DateRangePicker from '@/components/DateRangePicker';
 import ImageUploader from '@/components/ImageUploader';
+import RichTextEditor from '@/components/RichTextEditor';
+import GoogleMap from '@/components/GoogleMap';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -29,6 +30,8 @@ const CreateEventPage: React.FC = () => {
     address: '',
     contactInfo: '',
     category: 'upcoming',
+    latitude: null as number | null,
+    longitude: null as number | null,
   });
 
   const [startDate, setStartDate] = useState<Date | undefined>();
@@ -36,6 +39,16 @@ const CreateEventPage: React.FC = () => {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleLocationChange = (lat: number, lng: number, address: string) => {
+    console.log('Location changed:', lat, lng, address);
+    setFormData(prev => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng,
+      address: address
+    }));
   };
 
   const generateDatesString = () => {
@@ -71,26 +84,6 @@ const CreateEventPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // Geocodificar la dirección
-      let latitude = null;
-      let longitude = null;
-
-      if (formData.address) {
-        try {
-          const geocodeResponse = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address)}&limit=1`
-          );
-          const geocodeData = await geocodeResponse.json();
-          
-          if (geocodeData && geocodeData.length > 0) {
-            latitude = parseFloat(geocodeData[0].lat);
-            longitude = parseFloat(geocodeData[0].lon);
-          }
-        } catch (error) {
-          console.error('Error geocoding address:', error);
-        }
-      }
-
       const eventData = {
         user_id: user.id,
         title: formData.title,
@@ -104,8 +97,8 @@ const CreateEventPage: React.FC = () => {
         address: formData.address,
         contact_info: formData.contactInfo,
         category: formData.category,
-        latitude,
-        longitude,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
       };
 
       const { error } = await supabase
@@ -167,153 +160,147 @@ const CreateEventPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="container mx-auto p-4 max-w-2xl">
-        <Card>
-          <CardHeader>
-            <CardTitle>Información del Evento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium mb-1">
-                  Título del Evento *
-                </label>
-                <Input
-                  id="title"
-                  type="text"
-                  placeholder="Nombre del evento"
-                  value={formData.title}
-                  onChange={(e) => handleInputChange('title', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="shortDescription" className="block text-sm font-medium mb-1">
-                  Descripción Corta *
-                </label>
-                <Input
-                  id="shortDescription"
-                  type="text"
-                  placeholder="Descripción breve del evento"
-                  value={formData.shortDescription}
-                  onChange={(e) => handleInputChange('shortDescription', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="fullDescription" className="block text-sm font-medium mb-1">
-                  Descripción Completa
-                </label>
-                <Textarea
-                  id="fullDescription"
-                  placeholder="Descripción detallada del evento..."
-                  value={formData.fullDescription}
-                  onChange={(e) => handleInputChange('fullDescription', e.target.value)}
-                  rows={4}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Fechas del Evento *
-                </label>
-                <DateRangePicker
-                  startDate={startDate}
-                  endDate={endDate}
-                  onStartDateChange={setStartDate}
-                  onEndDateChange={setEndDate}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="price" className="block text-sm font-medium mb-1">
-                  Precio
-                </label>
-                <div className="relative">
+      <main className="container mx-auto p-4 max-w-4xl">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Información del Evento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="title" className="block text-sm font-medium mb-1">
+                    Título del Evento *
+                  </label>
                   <Input
-                    id="price"
+                    id="title"
                     type="text"
-                    placeholder="ej: Gratis, $10.000 CLP"
-                    value={formData.price}
-                    onChange={(e) => handleInputChange('price', e.target.value)}
-                    className="pl-10"
+                    placeholder="Nombre del evento"
+                    value={formData.title}
+                    onChange={(e) => handleInputChange('title', e.target.value)}
+                    required
                   />
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="address" className="block text-sm font-medium mb-1">
-                  Dirección del Evento
-                </label>
-                <div className="relative">
+                <div>
+                  <label htmlFor="shortDescription" className="block text-sm font-medium mb-1">
+                    Descripción Corta *
+                  </label>
                   <Input
-                    id="address"
+                    id="shortDescription"
                     type="text"
-                    placeholder="Dirección completa del evento"
-                    value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                    className="pl-10"
+                    placeholder="Descripción breve del evento"
+                    value={formData.shortDescription}
+                    onChange={(e) => handleInputChange('shortDescription', e.target.value)}
+                    required
                   />
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 </div>
-              </div>
 
-              <div>
-                <label htmlFor="contactInfo" className="block text-sm font-medium mb-1">
-                  Información de Contacto
-                </label>
-                <div className="relative">
-                  <Input
-                    id="contactInfo"
-                    type="text"
-                    placeholder="Email, teléfono, etc."
-                    value={formData.contactInfo}
-                    onChange={(e) => handleInputChange('contactInfo', e.target.value)}
-                    className="pl-10"
+                <div>
+                  <label htmlFor="fullDescription" className="block text-sm font-medium mb-1">
+                    Descripción Completa
+                  </label>
+                  <RichTextEditor
+                    value={formData.fullDescription}
+                    onChange={(value) => handleInputChange('fullDescription', value)}
+                    placeholder="Descripción detallada del evento..."
                   />
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 </div>
-              </div>
 
-              <ImageUploader
-                imageUrl={formData.imageUrl}
-                onImageChange={(url) => handleInputChange('imageUrl', url)}
-                onMessage={(msg, isError) => toast({
-                  title: isError ? "Error" : "Éxito",
-                  description: msg,
-                  variant: isError ? "destructive" : "default"
-                })}
-              />
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Fechas del Evento *
+                  </label>
+                  <DateRangePicker
+                    startDate={startDate}
+                    endDate={endDate}
+                    onStartDateChange={setStartDate}
+                    onEndDateChange={setEndDate}
+                  />
+                </div>
 
-              <div>
-                <label htmlFor="category" className="block text-sm font-medium mb-1">
-                  Categoría
-                </label>
-                <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona una categoría" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="upcoming">Próximos</SelectItem>
-                    <SelectItem value="ongoing">En Curso</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div>
+                  <label htmlFor="price" className="block text-sm font-medium mb-1">
+                    Precio
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="price"
+                      type="text"
+                      placeholder="ej: Gratis, $10.000 CLP"
+                      value={formData.price}
+                      onChange={(e) => handleInputChange('price', e.target.value)}
+                      className="pl-10"
+                    />
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  </div>
+                </div>
 
-              <div className="flex gap-4 pt-4">
-                <Button type="submit" className="flex-1" disabled={loading}>
-                  {loading ? 'Creando...' : 'Crear Evento'}
-                </Button>
-                <Button type="button" variant="outline" asChild>
-                  <Link to="/">Cancelar</Link>
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                <div>
+                  <label htmlFor="contactInfo" className="block text-sm font-medium mb-1">
+                    Información de Contacto
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="contactInfo"
+                      type="text"
+                      placeholder="Email, teléfono, etc."
+                      value={formData.contactInfo}
+                      onChange={(e) => handleInputChange('contactInfo', e.target.value)}
+                      className="pl-10"
+                    />
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  </div>
+                </div>
+
+                <ImageUploader
+                  imageUrl={formData.imageUrl}
+                  onImageChange={(url) => handleInputChange('imageUrl', url)}
+                  onMessage={(msg, isError) => toast({
+                    title: isError ? "Error" : "Éxito",
+                    description: msg,
+                    variant: isError ? "destructive" : "default"
+                  })}
+                />
+
+                <div>
+                  <label htmlFor="category" className="block text-sm font-medium mb-1">
+                    Categoría
+                  </label>
+                  <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="upcoming">Próximos</SelectItem>
+                      <SelectItem value="ongoing">En Curso</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <Button type="submit" className="flex-1" disabled={loading}>
+                    {loading ? 'Creando...' : 'Crear Evento'}
+                  </Button>
+                  <Button type="button" variant="outline" asChild>
+                    <Link to="/">Cancelar</Link>
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-6">
+            <GoogleMap
+              address={formData.address}
+              latitude={formData.latitude || undefined}
+              longitude={formData.longitude || undefined}
+              title={formData.title || 'Ubicación del evento'}
+              onLocationChange={handleLocationChange}
+              editable={true}
+            />
+          </div>
+        </div>
       </main>
     </div>
   );
