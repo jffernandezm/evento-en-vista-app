@@ -14,7 +14,7 @@ export const useEvents = () => {
       const { data, error } = await supabase
         .from('user_events')
         .select('*')
-        .eq('is_published', true) // Solo eventos publicados
+        .eq('is_published', true)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -22,12 +22,13 @@ export const useEvents = () => {
         return [];
       }
 
-      return data.map((event: UserEvent): EventType => {
+      const eventsWithDistance = data.map((event: UserEvent): EventType => {
         let distance = 'Ubicación no disponible';
+        let distanceKm = Infinity;
         
         // Calcular distancia real si tenemos coordenadas del evento y del usuario
         if (event.latitude && event.longitude && latitude && longitude) {
-          const distanceKm = calculateDistance(latitude, longitude, event.latitude, event.longitude);
+          distanceKm = calculateDistance(latitude, longitude, event.latitude, event.longitude);
           distance = `A ${distanceKm.toFixed(1)}km de ti`;
         }
 
@@ -48,8 +49,39 @@ export const useEvents = () => {
           latitude: event.latitude || undefined,
           longitude: event.longitude || undefined,
           is_published: event.is_published,
+          start_date: event.start_date,
+          end_date: event.end_date,
+          distanceKm: distanceKm !== Infinity ? distanceKm : undefined,
         };
       });
+
+      // Ordenar por proximidad y luego por fecha
+      eventsWithDistance.sort((a, b) => {
+        // Primero por distancia (eventos con ubicación primero)
+        if (a.distanceKm !== undefined && b.distanceKm !== undefined) {
+          if (a.distanceKm !== b.distanceKm) {
+            return a.distanceKm - b.distanceKm;
+          }
+        } else if (a.distanceKm !== undefined) {
+          return -1;
+        } else if (b.distanceKm !== undefined) {
+          return 1;
+        }
+
+        // Luego por fecha de inicio (más próximos primero)
+        if (a.start_date && b.start_date) {
+          return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+        } else if (a.start_date) {
+          return -1;
+        } else if (b.start_date) {
+          return 1;
+        }
+
+        // Finalmente por fecha de creación
+        return 0;
+      });
+
+      return eventsWithDistance;
     } catch (error) {
       console.error('Unexpected error fetching events:', error);
       return [];
@@ -94,6 +126,8 @@ export const useEvents = () => {
         latitude: data.latitude || undefined,
         longitude: data.longitude || undefined,
         is_published: data.is_published,
+        start_date: data.start_date,
+        end_date: data.end_date,
       };
     } catch (error) {
       console.error('Error fetching event:', error);
@@ -112,7 +146,6 @@ export const useEvents = () => {
     loadEvents();
   }, [latitude, longitude]);
 
-  // Solo devolver eventos de la base de datos
   const getAllEvents = (): EventType[] => {
     return userEvents;
   };

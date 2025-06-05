@@ -14,13 +14,6 @@ interface GoogleMapProps {
   editable?: boolean;
 }
 
-declare global {
-  interface Window {
-    google: typeof google;
-    initGoogleMaps: () => void;
-  }
-}
-
 const GoogleMap: React.FC<GoogleMapProps> = ({
   address = '',
   latitude,
@@ -41,53 +34,74 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   const defaultCoords = { lat: -33.4489, lng: -70.6693 };
 
   useEffect(() => {
-    loadGoogleMaps();
-  }, []);
+    const loadGoogleMaps = () => {
+      try {
+        // Si ya existe Google Maps API
+        if (window.google?.maps) {
+          setMapLoaded(true);
+          setHasError(false);
+          return;
+        }
 
-  useEffect(() => {
-    if (mapLoaded && map) {
-      updateMapLocation();
-    }
-  }, [mapLoaded, map, latitude, longitude, address]);
+        // Si ya hay un script cargándose
+        if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+          const checkLoaded = setInterval(() => {
+            if (window.google?.maps) {
+              setMapLoaded(true);
+              setHasError(false);
+              clearInterval(checkLoaded);
+            }
+          }, 100);
+          
+          // Timeout después de 10 segundos
+          setTimeout(() => {
+            clearInterval(checkLoaded);
+            if (!window.google?.maps) {
+              setHasError(true);
+            }
+          }, 10000);
+          return;
+        }
 
-  const loadGoogleMaps = () => {
-    try {
-      if (window.google && window.google.maps) {
-        setMapLoaded(true);
-        setHasError(false);
-        return;
-      }
-
-      if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+        // Crear callback global
         window.initGoogleMaps = () => {
           setMapLoaded(true);
           setHasError(false);
         };
-        return;
-      }
 
-      window.initGoogleMaps = () => {
-        setMapLoaded(true);
-        setHasError(false);
-      };
-
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places&callback=initGoogleMaps`;
-      script.async = true;
-      script.defer = true;
-      script.onerror = () => {
-        console.error('Error loading Google Maps');
+        // Cargar script
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dOWTgkNLEG8s5g&libraries=places&callback=initGoogleMaps`;
+        script.async = true;
+        script.defer = true;
+        script.onerror = () => {
+          console.error('Error loading Google Maps');
+          setHasError(true);
+        };
+        document.head.appendChild(script);
+      } catch (error) {
+        console.error('Error initializing Google Maps:', error);
         setHasError(true);
-      };
-      document.head.appendChild(script);
-    } catch (error) {
-      console.error('Error initializing Google Maps:', error);
-      setHasError(true);
+      }
+    };
+
+    loadGoogleMaps();
+  }, []);
+
+  useEffect(() => {
+    if (mapLoaded && !map && mapRef.current && window.google?.maps) {
+      initializeMap();
     }
-  };
+  }, [mapLoaded]);
+
+  useEffect(() => {
+    if (map && marker && window.google?.maps) {
+      updateMapLocation();
+    }
+  }, [latitude, longitude, address]);
 
   const initializeMap = () => {
-    if (!mapRef.current || !window.google) return;
+    if (!mapRef.current || !window.google?.maps) return;
 
     try {
       const coords = (latitude && longitude) ? { lat: latitude, lng: longitude } : defaultCoords;
@@ -126,6 +140,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
       setMap(newMap);
       setMarker(newMarker);
       geocoderRef.current = new google.maps.Geocoder();
+      setHasError(false);
     } catch (error) {
       console.error('Error initializing map:', error);
       setHasError(true);
@@ -133,7 +148,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   };
 
   const updateMapLocation = () => {
-    if (!map || !marker || !window.google) return;
+    if (!map || !marker || !window.google?.maps) return;
 
     try {
       const coords = (latitude && longitude) ? { lat: latitude, lng: longitude } : defaultCoords;
@@ -212,12 +227,6 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (mapLoaded && !map) {
-      initializeMap();
-    }
-  }, [mapLoaded]);
-
   if (hasError) {
     return (
       <Card>
@@ -230,9 +239,11 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
         <CardContent>
           <div className="flex items-center justify-center p-8 bg-gray-100 rounded-lg">
             <div className="text-center">
-              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p className="text-gray-600">No se pudo cargar el mapa</p>
-              <p className="text-sm text-gray-500 mt-1">{address || 'Ubicación no disponible'}</p>
+              <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-gray-600">Mapa no disponible</p>
+              {address && (
+                <p className="text-sm text-gray-500 mt-1">{address}</p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -269,9 +280,12 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
             className="w-full h-64 bg-gray-200 rounded-lg"
             style={{ minHeight: '256px' }}
           >
-            {!mapLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <p className="text-gray-600">Cargando mapa...</p>
+            {!mapLoaded && !hasError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p className="text-gray-600">Cargando mapa...</p>
+                </div>
               </div>
             )}
           </div>
