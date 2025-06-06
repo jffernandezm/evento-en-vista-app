@@ -34,6 +34,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [marker, setMarker] = useState<google.maps.Marker | null>(null);
   const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
 
@@ -102,7 +103,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   }, []);
 
   useEffect(() => {
-    if (mapLoaded && !map && mapRef.current && window.google?.maps) {
+    if (mapLoaded && mapRef.current && window.google?.maps && !map) {
       console.log('Initializing map...');
       initializeMap();
     }
@@ -153,6 +154,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
           if (event.latLng) {
             console.log('Map clicked at:', event.latLng.lat(), event.latLng.lng());
             newMarker.setPosition(event.latLng);
+            newMap.setCenter(event.latLng);
             reverseGeocode(event.latLng.lat(), event.latLng.lng());
           }
         });
@@ -220,8 +222,9 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
   };
 
   const searchLocation = async () => {
-    if (!geocoderRef.current || !searchAddress.trim()) return;
+    if (!geocoderRef.current || !searchAddress.trim() || !map || !marker) return;
 
+    setIsLoading(true);
     try {
       console.log('Searching for address:', searchAddress);
       const results = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
@@ -237,7 +240,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
         );
       });
 
-      if (results && results[0] && map && marker) {
+      if (results && results[0]) {
         const location = results[0].geometry.location;
         const lat = location.lat();
         const lng = location.lng();
@@ -249,10 +252,20 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
         
         if (onLocationChange) {
           onLocationChange(lat, lng, results[0].formatted_address);
+          setSearchAddress(results[0].formatted_address);
         }
       }
     } catch (error) {
       console.error('Error searching location:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchLocation();
     }
   };
 
@@ -295,10 +308,20 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
               placeholder="Buscar dirección..."
               value={searchAddress}
               onChange={(e) => setSearchAddress(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && searchLocation()}
+              onKeyPress={handleKeyPress}
+              disabled={isLoading}
             />
-            <Button onClick={searchLocation} size="icon" variant="outline">
-              <Search className="w-4 h-4" />
+            <Button 
+              onClick={searchLocation} 
+              size="icon" 
+              variant="outline"
+              disabled={isLoading || !searchAddress.trim()}
+            >
+              {isLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              ) : (
+                <Search className="w-4 h-4" />
+              )}
             </Button>
           </div>
         )}
@@ -318,9 +341,9 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
               </div>
             )}
           </div>
-          {editable && (
+          {editable && mapLoaded && (
             <p className="text-xs text-gray-500 mt-2">
-              Haz clic en el mapa o arrastra el marcador para seleccionar la ubicación exacta
+              Busca una dirección arriba o haz clic en el mapa para seleccionar la ubicación exacta
             </p>
           )}
         </div>

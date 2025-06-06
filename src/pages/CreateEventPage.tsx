@@ -12,6 +12,7 @@ import DateRangePicker from '@/components/DateRangePicker';
 import ImageUploader from '@/components/ImageUploader';
 import RichTextEditor from '@/components/RichTextEditor';
 import GoogleMap from '@/components/GoogleMap';
+import EventRecurrence from '@/components/EventRecurrence';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -36,6 +37,11 @@ const CreateEventPage: React.FC = () => {
 
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  
+  // Nuevos estados para periodicidad
+  const [recurrenceType, setRecurrenceType] = useState('none');
+  const [recurrenceDays, setRecurrenceDays] = useState<number[]>([]);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -81,6 +87,16 @@ const CreateEventPage: React.FC = () => {
       return;
     }
 
+    // Validar días de recurrencia si es semanal
+    if (recurrenceType === 'weekly' && recurrenceDays.length === 0) {
+      toast({
+        title: "Error",
+        description: "Debes seleccionar al menos un día para eventos semanales",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -99,6 +115,9 @@ const CreateEventPage: React.FC = () => {
         category: formData.category,
         latitude: formData.latitude,
         longitude: formData.longitude,
+        recurrence_type: recurrenceType,
+        recurrence_days: recurrenceType === 'weekly' ? recurrenceDays : null,
+        recurrence_end_date: recurrenceEndDate ? recurrenceEndDate.toISOString().split('T')[0] : null,
       };
 
       const { error } = await supabase
@@ -160,135 +179,137 @@ const CreateEventPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="container mx-auto p-4 max-w-4xl">
+      <main className="container mx-auto p-4 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Información del Evento</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <label htmlFor="title" className="block text-sm font-medium mb-1">
-                    Título del Evento *
-                  </label>
-                  <Input
-                    id="title"
-                    type="text"
-                    placeholder="Nombre del evento"
-                    value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="shortDescription" className="block text-sm font-medium mb-1">
-                    Descripción Corta *
-                  </label>
-                  <Input
-                    id="shortDescription"
-                    type="text"
-                    placeholder="Descripción breve del evento"
-                    value={formData.shortDescription}
-                    onChange={(e) => handleInputChange('shortDescription', e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="fullDescription" className="block text-sm font-medium mb-1">
-                    Descripción Completa
-                  </label>
-                  <RichTextEditor
-                    value={formData.fullDescription}
-                    onChange={(value) => handleInputChange('fullDescription', value)}
-                    placeholder="Descripción detallada del evento..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Fechas del Evento *
-                  </label>
-                  <DateRangePicker
-                    startDate={startDate}
-                    endDate={endDate}
-                    onStartDateChange={setStartDate}
-                    onEndDateChange={setEndDate}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="price" className="block text-sm font-medium mb-1">
-                    Precio
-                  </label>
-                  <div className="relative">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Información del Evento</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label htmlFor="title" className="block text-sm font-medium mb-1">
+                      Título del Evento *
+                    </label>
                     <Input
-                      id="price"
+                      id="title"
                       type="text"
-                      placeholder="ej: Gratis, $10.000 CLP"
-                      value={formData.price}
-                      onChange={(e) => handleInputChange('price', e.target.value)}
-                      className="pl-10"
+                      placeholder="Nombre del evento"
+                      value={formData.title}
+                      onChange={(e) => handleInputChange('title', e.target.value)}
+                      required
                     />
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   </div>
-                </div>
 
-                <div>
-                  <label htmlFor="contactInfo" className="block text-sm font-medium mb-1">
-                    Información de Contacto
-                  </label>
-                  <div className="relative">
+                  <div>
+                    <label htmlFor="shortDescription" className="block text-sm font-medium mb-1">
+                      Descripción Corta *
+                    </label>
                     <Input
-                      id="contactInfo"
+                      id="shortDescription"
                       type="text"
-                      placeholder="Email, teléfono, etc."
-                      value={formData.contactInfo}
-                      onChange={(e) => handleInputChange('contactInfo', e.target.value)}
-                      className="pl-10"
+                      placeholder="Descripción breve del evento"
+                      value={formData.shortDescription}
+                      onChange={(e) => handleInputChange('shortDescription', e.target.value)}
+                      required
                     />
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   </div>
-                </div>
 
-                <ImageUploader
-                  imageUrl={formData.imageUrl}
-                  onImageChange={(url) => handleInputChange('imageUrl', url)}
-                  onMessage={(msg, isError) => toast({
-                    title: isError ? "Error" : "Éxito",
-                    description: msg,
-                    variant: isError ? "destructive" : "default"
-                  })}
-                />
+                  <div>
+                    <label htmlFor="fullDescription" className="block text-sm font-medium mb-1">
+                      Descripción Completa
+                    </label>
+                    <RichTextEditor
+                      value={formData.fullDescription}
+                      onChange={(value) => handleInputChange('fullDescription', value)}
+                      placeholder="Descripción detallada del evento..."
+                    />
+                  </div>
 
-                <div>
-                  <label htmlFor="category" className="block text-sm font-medium mb-1">
-                    Categoría
-                  </label>
-                  <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una categoría" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="upcoming">Próximos</SelectItem>
-                      <SelectItem value="ongoing">En Curso</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Fechas del Evento *
+                    </label>
+                    <DateRangePicker
+                      startDate={startDate}
+                      endDate={endDate}
+                      onStartDateChange={setStartDate}
+                      onEndDateChange={setEndDate}
+                    />
+                  </div>
 
-                <div className="flex gap-4 pt-4">
-                  <Button type="submit" className="flex-1" disabled={loading}>
-                    {loading ? 'Creando...' : 'Crear Evento'}
-                  </Button>
-                  <Button type="button" variant="outline" asChild>
-                    <Link to="/">Cancelar</Link>
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+                  <div>
+                    <label htmlFor="price" className="block text-sm font-medium mb-1">
+                      Precio
+                    </label>
+                    <div className="relative">
+                      <Input
+                        id="price"
+                        type="text"
+                        placeholder="ej: Gratis, $10.000 CLP"
+                        value={formData.price}
+                        onChange={(e) => handleInputChange('price', e.target.value)}
+                        className="pl-10"
+                      />
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="contactInfo" className="block text-sm font-medium mb-1">
+                      Información de Contacto
+                    </label>
+                    <div className="relative">
+                      <Input
+                        id="contactInfo"
+                        type="text"
+                        placeholder="Email, teléfono, etc."
+                        value={formData.contactInfo}
+                        onChange={(e) => handleInputChange('contactInfo', e.target.value)}
+                        className="pl-10"
+                      />
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </div>
+
+                  <ImageUploader
+                    imageUrl={formData.imageUrl}
+                    onImageChange={(url) => handleInputChange('imageUrl', url)}
+                    onMessage={(msg, isError) => toast({
+                      title: isError ? "Error" : "Éxito",
+                      description: msg,
+                      variant: isError ? "destructive" : "default"
+                    })}
+                  />
+
+                  <div>
+                    <label htmlFor="category" className="block text-sm font-medium mb-1">
+                      Categoría
+                    </label>
+                    <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una categoría" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="upcoming">Próximos</SelectItem>
+                        <SelectItem value="ongoing">En Curso</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex gap-4 pt-4">
+                    <Button type="submit" className="flex-1" disabled={loading}>
+                      {loading ? 'Creando...' : 'Crear Evento'}
+                    </Button>
+                    <Button type="button" variant="outline" asChild>
+                      <Link to="/">Cancelar</Link>
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="space-y-6">
             <GoogleMap
@@ -298,6 +319,15 @@ const CreateEventPage: React.FC = () => {
               title={formData.title || 'Ubicación del evento'}
               onLocationChange={handleLocationChange}
               editable={true}
+            />
+            
+            <EventRecurrence
+              recurrenceType={recurrenceType}
+              recurrenceDays={recurrenceDays}
+              recurrenceEndDate={recurrenceEndDate}
+              onRecurrenceTypeChange={setRecurrenceType}
+              onRecurrenceDaysChange={setRecurrenceDays}
+              onRecurrenceEndDateChange={setRecurrenceEndDate}
             />
           </div>
         </div>

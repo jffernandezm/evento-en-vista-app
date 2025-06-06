@@ -1,37 +1,35 @@
+
 import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Trash2, Calendar, Clock, ChevronDown, ChevronRight, Upload, X, Image as ImageIcon } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { EventDay, EventActivity, DatabaseEventActivity } from '@/types/event';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Plus, Calendar, Clock, Trash2, Edit, Save, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import RichTextEditor from './RichTextEditor';
-import RichTextDisplay from './RichTextDisplay';
+import { EventDay, EventActivity } from '@/types/event';
+import { useToast } from '@/hooks/use-toast';
+import { format, parseISO } from 'date-fns';
+import ImageUploader from '@/components/ImageUploader';
 
 interface EventActivitiesManagerProps {
   eventId: string;
   canEdit: boolean;
-  onActivitiesChange?: (activities: EventDay[]) => void;
 }
 
-const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ 
-  eventId, 
-  canEdit, 
-  onActivitiesChange 
-}) => {
-  const [activities, setActivities] = useState<EventDay[]>([]);
+const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId, canEdit }) => {
+  const { toast } = useToast();
+  const [activitiesByDay, setActivitiesByDay] = useState<EventDay[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [newActivity, setNewActivity] = useState({
-    date: '',
-    time: '',
-    description: '',
+    day_date: '',
+    time_slot: '',
+    activity_description: '',
     image_url: ''
   });
-  const [uploading, setUploading] = useState(false);
-  const { toast } = useToast();
+  const [editingActivity, setEditingActivity] = useState<string | null>(null);
+  const [editActivityData, setEditActivityData] = useState<EventActivity | null>(null);
 
   useEffect(() => {
     loadActivities();
@@ -48,130 +46,73 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({
 
       if (error) {
         console.error('Error loading activities:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar las actividades",
+          variant: "destructive"
+        });
         return;
       }
 
-      const groupedActivities = data.reduce((acc: EventDay[], activity: DatabaseEventActivity) => {
-        const existingDay = acc.find(day => day.day_date === activity.day_date);
+      // Agrupar actividades por día
+      const groupedActivities: EventDay[] = [];
+      data?.forEach((activity) => {
+        const dayDate = activity.day_date;
+        let dayGroup = groupedActivities.find(day => day.day_date === dayDate);
         
-        const activityObj: EventActivity = {
-          id: activity.id,
-          time_slot: activity.time_slot,
-          activity_description: activity.activity_description,
-          rich_description: activity.rich_description,
-          image_url: activity.image_url || undefined
-        };
-
-        if (existingDay) {
-          existingDay.activities.push(activityObj);
-        } else {
-          acc.push({
-            day_date: activity.day_date,
-            activities: [activityObj]
-          });
+        if (!dayGroup) {
+          dayGroup = {
+            day_date: dayDate,
+            activities: []
+          };
+          groupedActivities.push(dayGroup);
         }
         
-        return acc;
-      }, []);
+        dayGroup.activities.push({
+          id: activity.id,
+          event_id: activity.event_id,
+          day_date: activity.day_date,
+          time_slot: activity.time_slot,
+          activity_description: activity.activity_description,
+          image_url: activity.image_url,
+          created_at: activity.created_at,
+          updated_at: activity.updated_at
+        });
+      });
 
-      setActivities(groupedActivities);
-      onActivitiesChange?.(groupedActivities);
+      setActivitiesByDay(groupedActivities);
     } catch (error) {
       console.error('Error loading activities:', error);
+      toast({
+        title: "Error",
+        description: "Error inesperado al cargar actividades",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleDay = (date: string) => {
-    const newExpanded = new Set(expandedDays);
-    if (newExpanded.has(date)) {
-      newExpanded.delete(date);
-    } else {
-      newExpanded.add(date);
-    }
-    setExpandedDays(newExpanded);
-  };
-
-  const uploadActivityImage = async (file: File) => {
-    try {
-      setUploading(true);
-      
-      const fileExt = file.name.split('.').pop();
-      const fileName = `activities/${eventId}/${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('event-media')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from('event-media')
-        .getPublicUrl(fileName);
-
-      setNewActivity(prev => ({ ...prev, image_url: data.publicUrl }));
-      
-      toast({
-        title: "Éxito",
-        description: "Imagen subida correctamente"
-      });
-    } catch (error) {
-      console.error('Error uploading image:', error);
+  const handleAddActivity = async () => {
+    if (!newActivity.day_date || !newActivity.time_slot || !newActivity.activity_description) {
       toast({
         title: "Error",
-        description: "No se pudo subir la imagen",
-        variant: "destructive"
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "Error",
-          description: "La imagen no puede ser mayor a 5MB",
-          variant: "destructive"
-        });
-        return;
-      }
-      uploadActivityImage(file);
-    }
-  };
-
-  const addActivity = async () => {
-    if (!newActivity.date || !newActivity.time || !newActivity.description) {
-      toast({
-        title: "Error",
-        description: "Por favor completa todos los campos obligatorios",
+        description: "Por favor completa todos los campos requeridos",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      // Fix date handling to avoid timezone issues
-      const selectedDate = new Date(newActivity.date + 'T12:00:00');
-      const formattedDate = selectedDate.toISOString().split('T')[0];
-
-      const activityData = {
-        event_id: eventId,
-        day_date: formattedDate,
-        time_slot: newActivity.time,
-        activity_description: newActivity.description,
-        rich_description: { content: newActivity.description },
-        image_url: newActivity.image_url || null
-      };
-
-      console.log('Saving activity with date:', formattedDate, 'from input:', newActivity.date);
-
       const { error } = await supabase
         .from('event_activities')
-        .insert([activityData]);
+        .insert([{
+          event_id: eventId,
+          day_date: newActivity.day_date,
+          time_slot: newActivity.time_slot,
+          activity_description: newActivity.activity_description,
+          image_url: newActivity.image_url || null
+        }]);
 
       if (error) {
         console.error('Error adding activity:', error);
@@ -187,20 +128,83 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({
         title: "Éxito",
         description: "Actividad agregada correctamente"
       });
-      
-      setNewActivity({ date: '', time: '', description: '', image_url: '' });
-      await loadActivities();
+
+      setNewActivity({
+        day_date: '',
+        time_slot: '',
+        activity_description: '',
+        image_url: ''
+      });
+
+      loadActivities();
     } catch (error) {
       console.error('Error adding activity:', error);
       toast({
         title: "Error",
-        description: "Error inesperado al agregar la actividad",
+        description: "Error inesperado al agregar actividad",
         variant: "destructive"
       });
     }
   };
 
-  const deleteActivity = async (activityId: string) => {
+  const handleEditActivity = (activity: EventActivity) => {
+    setEditingActivity(activity.id || '');
+    setEditActivityData({ ...activity });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editActivityData || !editActivityData.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('event_activities')
+        .update({
+          day_date: editActivityData.day_date,
+          time_slot: editActivityData.time_slot,
+          activity_description: editActivityData.activity_description,
+          image_url: editActivityData.image_url || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editActivityData.id);
+
+      if (error) {
+        console.error('Error updating activity:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar la actividad",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Éxito",
+        description: "Actividad actualizada correctamente"
+      });
+
+      setEditingActivity(null);
+      setEditActivityData(null);
+      loadActivities();
+    } catch (error) {
+      console.error('Error updating activity:', error);
+      toast({
+        title: "Error",
+        description: "Error inesperado al actualizar actividad",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingActivity(null);
+    setEditActivityData(null);
+  };
+
+  const handleDeleteActivity = async (activityId: string) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar esta actividad?')) {
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('event_activities')
@@ -222,12 +226,12 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({
         description: "Actividad eliminada correctamente"
       });
 
-      await loadActivities();
+      loadActivities();
     } catch (error) {
       console.error('Error deleting activity:', error);
       toast({
         title: "Error",
-        description: "Error inesperado al eliminar la actividad",
+        description: "Error inesperado al eliminar actividad",
         variant: "destructive"
       });
     }
@@ -235,190 +239,215 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold flex items-center">
-          <Calendar className="w-5 h-5 mr-2" />
-          Actividades por Día
-        </h3>
-        <p className="text-center py-4">Cargando actividades...</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Actividades del Evento</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Cargando actividades...</p>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold flex items-center">
-        <Calendar className="w-5 h-5 mr-2" />
-        Actividades por Día
-      </h3>
-
-      {canEdit && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Agregar Nueva Actividad</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Calendar className="w-5 h-5 mr-2" />
+          Actividades del Evento
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {canEdit && (
+          <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+            <h4 className="font-medium flex items-center">
+              <Plus className="w-4 h-4 mr-2" />
+              Agregar Nueva Actividad
+            </h4>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Fecha *</label>
                 <Input
                   type="date"
-                  value={newActivity.date}
-                  onChange={(e) => setNewActivity(prev => ({ ...prev, date: e.target.value }))}
+                  value={newActivity.day_date}
+                  onChange={(e) => setNewActivity(prev => ({ ...prev, day_date: e.target.value }))}
+                  required
                 />
               </div>
+              
               <div>
                 <label className="block text-sm font-medium mb-1">Hora *</label>
                 <Input
                   type="time"
-                  value={newActivity.time}
-                  onChange={(e) => setNewActivity(prev => ({ ...prev, time: e.target.value }))}
+                  value={newActivity.time_slot}
+                  onChange={(e) => setNewActivity(prev => ({ ...prev, time_slot: e.target.value }))}
+                  required
                 />
               </div>
             </div>
             
             <div>
               <label className="block text-sm font-medium mb-1">Descripción de la Actividad *</label>
-              <RichTextEditor
-                value={newActivity.description}
-                onChange={(value) => setNewActivity(prev => ({ ...prev, description: value }))}
-                placeholder="Describe la actividad... Usa **texto** para negrita, *texto* para cursiva"
+              <Textarea
+                placeholder="Describe la actividad..."
+                value={newActivity.activity_description}
+                onChange={(e) => setNewActivity(prev => ({ ...prev, activity_description: e.target.value }))}
+                required
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Imagen Opcional</label>
-              {newActivity.image_url ? (
-                <div className="relative mb-2">
-                  <img 
-                    src={newActivity.image_url} 
-                    alt="Preview actividad" 
-                    className="w-full h-32 object-cover rounded-lg border"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    onClick={() => setNewActivity(prev => ({ ...prev, image_url: '' }))}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center mb-2">
-                  <ImageIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                  <p className="text-gray-600 text-sm">Imagen opcional para la actividad</p>
-                </div>
-              )}
-              
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                disabled={uploading}
-                className="hidden"
-                id="activity-image-upload"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('activity-image-upload')?.click()}
-                disabled={uploading}
-                className="w-full"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                {uploading ? 'Subiendo...' : 'Seleccionar Imagen'}
-              </Button>
-            </div>
-
-            <Button onClick={addActivity} className="w-full" disabled={uploading}>
+            <ImageUploader
+              imageUrl={newActivity.image_url}
+              onImageChange={(url) => setNewActivity(prev => ({ ...prev, image_url: url }))}
+              onMessage={(msg, isError) => toast({
+                title: isError ? "Error" : "Éxito",
+                description: msg,
+                variant: isError ? "destructive" : "default"
+              })}
+            />
+            
+            <Button onClick={handleAddActivity} className="w-full">
               <Plus className="w-4 h-4 mr-2" />
               Agregar Actividad
             </Button>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
 
-      {activities.length > 0 ? (
-        <div className="space-y-2">
-          {activities.map((day) => (
-            <Card key={day.day_date}>
-              <Collapsible 
-                open={expandedDays.has(day.day_date)} 
-                onOpenChange={() => toggleDay(day.day_date)}
-              >
-                <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
-                    <CardTitle className="text-base flex items-center justify-between">
-                      <span>
-                        {new Date(day.day_date + 'T12:00:00').toLocaleDateString('es-ES', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                        <span className="ml-2 text-sm font-normal text-gray-600">
-                          ({day.activities.length} actividad{day.activities.length !== 1 ? 'es' : ''})
-                        </span>
-                      </span>
-                      {expandedDays.has(day.day_date) ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    <div className="space-y-3">
-                      {day.activities.map((activity) => (
-                        <div key={activity.id} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
-                          <div className="flex-1">
-                            <div className="flex items-center text-sm font-medium text-gray-600 mb-2">
-                              <Clock className="w-4 h-4 mr-1" />
-                              {activity.time_slot}
-                            </div>
-                            <RichTextDisplay 
-                              content={activity.activity_description} 
-                              className="text-gray-800 mb-2"
-                            />
-                            {activity.image_url && (
-                              <img
-                                src={activity.image_url}
-                                alt="Actividad"
-                                className="w-full max-w-sm h-32 object-cover rounded-lg mt-2"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.src = '/placeholder.svg';
-                                }}
+        {activitiesByDay.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">
+            No hay actividades programadas para este evento.
+          </p>
+        ) : (
+          <div className="space-y-6">
+            {activitiesByDay.map((day, dayIndex) => (
+              <div key={day.day_date} className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  <h3 className="text-lg font-semibold">
+                    {format(parseISO(day.day_date), 'EEEE, dd MMMM yyyy')}
+                  </h3>
+                  <Badge variant="outline">
+                    {day.activities.length} actividad{day.activities.length !== 1 ? 'es' : ''}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-3 ml-7">
+                  {day.activities.map((activity) => (
+                    <div key={activity.id} className="border rounded-lg p-4 bg-white">
+                      {editingActivity === activity.id ? (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Fecha *</label>
+                              <Input
+                                type="date"
+                                value={editActivityData?.day_date || ''}
+                                onChange={(e) => setEditActivityData(prev => 
+                                  prev ? { ...prev, day_date: e.target.value } : null
+                                )}
                               />
+                            </div>
+                            
+                            <div>
+                              <label className="block text-sm font-medium mb-1">Hora *</label>
+                              <Input
+                                type="time"
+                                value={editActivityData?.time_slot || ''}
+                                onChange={(e) => setEditActivityData(prev => 
+                                  prev ? { ...prev, time_slot: e.target.value } : null
+                                )}
+                              />
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Descripción *</label>
+                            <Textarea
+                              value={editActivityData?.activity_description || ''}
+                              onChange={(e) => setEditActivityData(prev => 
+                                prev ? { ...prev, activity_description: e.target.value } : null
+                              )}
+                            />
+                          </div>
+
+                          <ImageUploader
+                            imageUrl={editActivityData?.image_url || ''}
+                            onImageChange={(url) => setEditActivityData(prev => 
+                              prev ? { ...prev, image_url: url } : null
+                            )}
+                            onMessage={(msg, isError) => toast({
+                              title: isError ? "Error" : "Éxito",
+                              description: msg,
+                              variant: isError ? "destructive" : "default"
+                            })}
+                          />
+                          
+                          <div className="flex space-x-2">
+                            <Button onClick={handleSaveEdit} size="sm">
+                              <Save className="w-4 h-4 mr-1" />
+                              Guardar
+                            </Button>
+                            <Button onClick={handleCancelEdit} variant="outline" size="sm">
+                              <X className="w-4 h-4 mr-1" />
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <Clock className="w-4 h-4 text-gray-500" />
+                                <span className="font-medium">{activity.time_slot}</span>
+                              </div>
+                              <p className="text-gray-700">{activity.activity_description}</p>
+                              {activity.image_url && (
+                                <div className="mt-3">
+                                  <img 
+                                    src={activity.image_url} 
+                                    alt="Actividad" 
+                                    className="max-w-xs rounded-lg"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            
+                            {canEdit && (
+                              <div className="flex space-x-2 ml-4">
+                                <Button
+                                  onClick={() => handleEditActivity(activity)}
+                                  size="sm"
+                                  variant="outline"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  onClick={() => handleDeleteActivity(activity.id || '')}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             )}
                           </div>
-                          {canEdit && activity.id && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => deleteActivity(activity.id!)}
-                              className="shrink-0"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
+                        </>
+                      )}
                     </div>
-                  </CardContent>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <p className="text-gray-500 text-center py-4">No hay actividades programadas para este evento.</p>
-      )}
-    </div>
+                  ))}
+                </div>
+                
+                {dayIndex < activitiesByDay.length - 1 && <Separator />}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

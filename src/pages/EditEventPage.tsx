@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,6 +15,7 @@ import EventActivitiesManager from '@/components/EventActivitiesManager';
 import EventMediaManager from '@/components/EventMediaManager';
 import GoogleMap from '@/components/GoogleMap';
 import RichTextEditor from '@/components/RichTextEditor';
+import EventRecurrence from '@/components/EventRecurrence';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -45,6 +45,11 @@ const EditEventPage: React.FC = () => {
 
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  
+  // Estados para periodicidad
+  const [recurrenceType, setRecurrenceType] = useState('none');
+  const [recurrenceDays, setRecurrenceDays] = useState<number[]>([]);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>();
 
   useEffect(() => {
     if (id && user) {
@@ -102,11 +107,18 @@ const EditEventPage: React.FC = () => {
         is_published: data.is_published ?? true,
       });
 
+      // Cargar datos de periodicidad
+      setRecurrenceType(data.recurrence_type || 'none');
+      setRecurrenceDays(data.recurrence_days || []);
+      
       if (data.start_date) {
         setStartDate(new Date(data.start_date));
       }
       if (data.end_date) {
         setEndDate(new Date(data.end_date));
+      }
+      if (data.recurrence_end_date) {
+        setRecurrenceEndDate(new Date(data.recurrence_end_date));
       }
 
     } catch (error) {
@@ -159,6 +171,16 @@ const EditEventPage: React.FC = () => {
       return;
     }
 
+    // Validar días de recurrencia si es semanal
+    if (recurrenceType === 'weekly' && recurrenceDays.length === 0) {
+      toast({
+        title: "Error",
+        description: "Debes seleccionar al menos un día para eventos semanales",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -178,6 +200,9 @@ const EditEventPage: React.FC = () => {
         latitude: formData.latitude,
         longitude: formData.longitude,
         is_published: formData.is_published,
+        recurrence_type: recurrenceType,
+        recurrence_days: recurrenceType === 'weekly' ? recurrenceDays : null,
+        recurrence_end_date: recurrenceEndDate ? recurrenceEndDate.toISOString().split('T')[0] : null,
       };
 
       const { error } = await supabase
@@ -248,153 +273,155 @@ const EditEventPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="container mx-auto p-4 max-w-4xl">
+      <main className="container mx-auto p-4 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Información del Evento</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    {formData.is_published ? (
-                      <Eye className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <EyeOff className="w-5 h-5 text-gray-400" />
-                    )}
-                    <span className="font-medium">
-                      {formData.is_published ? 'Evento Publicado' : 'Evento No Publicado'}
-                    </span>
-                  </div>
-                  <Switch
-                    checked={formData.is_published}
-                    onCheckedChange={(checked) => handleInputChange('is_published', checked)}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="title" className="block text-sm font-medium mb-1">
-                    Título del Evento *
-                  </label>
-                  <Input
-                    id="title"
-                    type="text"
-                    placeholder="Nombre del evento"
-                    value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="shortDescription" className="block text-sm font-medium mb-1">
-                    Descripción Corta *
-                  </label>
-                  <Input
-                    id="shortDescription"
-                    type="text"
-                    placeholder="Descripción breve del evento"
-                    value={formData.shortDescription}
-                    onChange={(e) => handleInputChange('shortDescription', e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="fullDescription" className="block text-sm font-medium mb-1">
-                    Descripción Completa
-                  </label>
-                  <RichTextEditor
-                    value={formData.fullDescription}
-                    onChange={(value) => handleInputChange('fullDescription', value)}
-                    placeholder="Descripción detallada del evento..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Fechas del Evento *
-                  </label>
-                  <DateRangePicker
-                    startDate={startDate}
-                    endDate={endDate}
-                    onStartDateChange={setStartDate}
-                    onEndDateChange={setEndDate}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="price" className="block text-sm font-medium mb-1">
-                    Precio
-                  </label>
-                  <div className="relative">
-                    <Input
-                      id="price"
-                      type="text"
-                      placeholder="ej: Gratis, $10.000 CLP"
-                      value={formData.price}
-                      onChange={(e) => handleInputChange('price', e.target.value)}
-                      className="pl-10"
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Información del Evento</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      {formData.is_published ? (
+                        <Eye className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <EyeOff className="w-5 h-5 text-gray-400" />
+                      )}
+                      <span className="font-medium">
+                        {formData.is_published ? 'Evento Publicado' : 'Evento No Publicado'}
+                      </span>
+                    </div>
+                    <Switch
+                      checked={formData.is_published}
+                      onCheckedChange={(checked) => handleInputChange('is_published', checked)}
                     />
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   </div>
-                </div>
 
-                <div>
-                  <label htmlFor="contactInfo" className="block text-sm font-medium mb-1">
-                    Información de Contacto
-                  </label>
-                  <div className="relative">
+                  <div>
+                    <label htmlFor="title" className="block text-sm font-medium mb-1">
+                      Título del Evento *
+                    </label>
                     <Input
-                      id="contactInfo"
+                      id="title"
                       type="text"
-                      placeholder="Email, teléfono, etc."
-                      value={formData.contactInfo}
-                      onChange={(e) => handleInputChange('contactInfo', e.target.value)}
-                      className="pl-10"
+                      placeholder="Nombre del evento"
+                      value={formData.title}
+                      onChange={(e) => handleInputChange('title', e.target.value)}
+                      required
                     />
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   </div>
-                </div>
 
-                <ImageUploader
-                  imageUrl={formData.imageUrl}
-                  onImageChange={(url) => handleInputChange('imageUrl', url)}
-                  onMessage={(msg, isError) => toast({
-                    title: isError ? "Error" : "Éxito",
-                    description: msg,
-                    variant: isError ? "destructive" : "default"
-                  })}
-                />
+                  <div>
+                    <label htmlFor="shortDescription" className="block text-sm font-medium mb-1">
+                      Descripción Corta *
+                    </label>
+                    <Input
+                      id="shortDescription"
+                      type="text"
+                      placeholder="Descripción breve del evento"
+                      value={formData.shortDescription}
+                      onChange={(e) => handleInputChange('shortDescription', e.target.value)}
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <label htmlFor="category" className="block text-sm font-medium mb-1">
-                    Categoría
-                  </label>
-                  <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una categoría" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="upcoming">Próximos</SelectItem>
-                      <SelectItem value="ongoing">En Curso</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div>
+                    <label htmlFor="fullDescription" className="block text-sm font-medium mb-1">
+                      Descripción Completa
+                    </label>
+                    <RichTextEditor
+                      value={formData.fullDescription}
+                      onChange={(value) => handleInputChange('fullDescription', value)}
+                      placeholder="Descripción detallada del evento..."
+                    />
+                  </div>
 
-                <div className="flex gap-4 pt-4">
-                  <Button type="submit" className="flex-1" disabled={loading}>
-                    <Save className="w-4 h-4 mr-2" />
-                    {loading ? 'Guardando...' : 'Guardar Cambios'}
-                  </Button>
-                  <Button type="button" variant="outline" asChild>
-                    <Link to={`/event/${id}`}>Cancelar</Link>
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Fechas del Evento *
+                    </label>
+                    <DateRangePicker
+                      startDate={startDate}
+                      endDate={endDate}
+                      onStartDateChange={setStartDate}
+                      onEndDateChange={setEndDate}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="price" className="block text-sm font-medium mb-1">
+                      Precio
+                    </label>
+                    <div className="relative">
+                      <Input
+                        id="price"
+                        type="text"
+                        placeholder="ej: Gratis, $10.000 CLP"
+                        value={formData.price}
+                        onChange={(e) => handleInputChange('price', e.target.value)}
+                        className="pl-10"
+                      />
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="contactInfo" className="block text-sm font-medium mb-1">
+                      Información de Contacto
+                    </label>
+                    <div className="relative">
+                      <Input
+                        id="contactInfo"
+                        type="text"
+                        placeholder="Email, teléfono, etc."
+                        value={formData.contactInfo}
+                        onChange={(e) => handleInputChange('contactInfo', e.target.value)}
+                        className="pl-10"
+                      />
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </div>
+
+                  <ImageUploader
+                    imageUrl={formData.imageUrl}
+                    onImageChange={(url) => handleInputChange('imageUrl', url)}
+                    onMessage={(msg, isError) => toast({
+                      title: isError ? "Error" : "Éxito",
+                      description: msg,
+                      variant: isError ? "destructive" : "default"
+                    })}
+                  />
+
+                  <div>
+                    <label htmlFor="category" className="block text-sm font-medium mb-1">
+                      Categoría
+                    </label>
+                    <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una categoría" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="upcoming">Próximos</SelectItem>
+                        <SelectItem value="ongoing">En Curso</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex gap-4 pt-4">
+                    <Button type="submit" className="flex-1" disabled={loading}>
+                      <Save className="w-4 h-4 mr-2" />
+                      {loading ? 'Guardando...' : 'Guardar Cambios'}
+                    </Button>
+                    <Button type="button" variant="outline" asChild>
+                      <Link to={`/event/${id}`}>Cancelar</Link>
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="space-y-6">
             <GoogleMap
@@ -404,6 +431,15 @@ const EditEventPage: React.FC = () => {
               title={formData.title}
               onLocationChange={handleLocationChange}
               editable={true}
+            />
+            
+            <EventRecurrence
+              recurrenceType={recurrenceType}
+              recurrenceDays={recurrenceDays}
+              recurrenceEndDate={recurrenceEndDate}
+              onRecurrenceTypeChange={setRecurrenceType}
+              onRecurrenceDaysChange={setRecurrenceDays}
+              onRecurrenceEndDateChange={setRecurrenceEndDate}
             />
             
             <EventMediaManager eventId={id!} canEdit={canEdit} />

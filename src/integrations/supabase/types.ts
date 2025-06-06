@@ -130,6 +130,9 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           price: string
+          recurrence_days: number[] | null
+          recurrence_end_date: string | null
+          recurrence_type: string | null
           short_description: string
           start_date: string | null
           title: string
@@ -150,6 +153,9 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           price?: string
+          recurrence_days?: number[] | null
+          recurrence_end_date?: string | null
+          recurrence_type?: string | null
           short_description: string
           start_date?: string | null
           title: string
@@ -170,6 +176,9 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           price?: string
+          recurrence_days?: number[] | null
+          recurrence_end_date?: string | null
+          recurrence_type?: string | null
           short_description?: string
           start_date?: string | null
           title?: string
