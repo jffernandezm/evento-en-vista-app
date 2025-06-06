@@ -19,7 +19,6 @@ const EventDetailPage: React.FC = () => {
   const { getEventById } = useEvents();
   const [event, setEvent] = useState<EventType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [eventActivities, setEventActivities] = useState<EventDay[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -35,7 +34,6 @@ const EventDetailPage: React.FC = () => {
       const userEvent = await getEventById(id);
       if (userEvent) {
         setEvent(userEvent);
-        setEventActivities(userEvent.activitiesByDay || []);
       } else {
         setEvent(null);
       }
@@ -139,7 +137,6 @@ const EventDetailPage: React.FC = () => {
             <EventActivitiesManager 
               eventId={id!} 
               canEdit={canEdit || false} 
-              onActivitiesChange={setEventActivities}
             />
             
             <GoogleMap 
