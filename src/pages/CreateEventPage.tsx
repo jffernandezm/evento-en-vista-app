@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,8 +37,8 @@ const CreateEventPage: React.FC = () => {
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   
-  // Nuevos estados para periodicidad
-  const [recurrenceType, setRecurrenceType] = useState('none');
+  // Estados para periodicidad usando la nueva tabla
+  const [recurrenceTypeId, setRecurrenceTypeId] = useState<string | null>(null);
   const [recurrenceDays, setRecurrenceDays] = useState<number[]>([]);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>();
 
@@ -87,16 +86,6 @@ const CreateEventPage: React.FC = () => {
       return;
     }
 
-    // Validar días de recurrencia si es semanal
-    if (recurrenceType === 'weekly' && recurrenceDays.length === 0) {
-      toast({
-        title: "Error",
-        description: "Debes seleccionar al menos un día para eventos semanales",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -115,8 +104,8 @@ const CreateEventPage: React.FC = () => {
         category: formData.category,
         latitude: formData.latitude,
         longitude: formData.longitude,
-        recurrence_type: recurrenceType,
-        recurrence_days: recurrenceType === 'weekly' ? recurrenceDays : null,
+        recurrence_type_id: recurrenceTypeId,
+        recurrence_days: recurrenceDays.length > 0 ? recurrenceDays : null,
         recurrence_end_date: recurrenceEndDate ? recurrenceEndDate.toISOString().split('T')[0] : null,
       };
 
@@ -322,10 +311,10 @@ const CreateEventPage: React.FC = () => {
             />
             
             <EventRecurrence
-              recurrenceType={recurrenceType}
+              recurrenceTypeId={recurrenceTypeId}
               recurrenceDays={recurrenceDays}
               recurrenceEndDate={recurrenceEndDate}
-              onRecurrenceTypeChange={setRecurrenceType}
+              onRecurrenceTypeIdChange={setRecurrenceTypeId}
               onRecurrenceDaysChange={setRecurrenceDays}
               onRecurrenceEndDateChange={setRecurrenceEndDate}
             />

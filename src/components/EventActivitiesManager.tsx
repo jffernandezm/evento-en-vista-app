@@ -11,7 +11,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { EventDay, EventActivity } from '@/types/event';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 import ImageUploader from '@/components/ImageUploader';
+import RichTextEditor from '@/components/RichTextEditor';
+import RichTextDisplay from '@/components/RichTextDisplay';
 
 interface EventActivitiesManagerProps {
   eventId: string;
@@ -26,6 +29,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
     day_date: '',
     time_slot: '',
     activity_description: '',
+    rich_description: '',
     image_url: ''
   });
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
@@ -74,6 +78,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
           day_date: activity.day_date,
           time_slot: activity.time_slot,
           activity_description: activity.activity_description,
+          rich_description: activity.rich_description,
           image_url: activity.image_url,
           created_at: activity.created_at,
           updated_at: activity.updated_at
@@ -111,6 +116,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
           day_date: newActivity.day_date,
           time_slot: newActivity.time_slot,
           activity_description: newActivity.activity_description,
+          rich_description: newActivity.rich_description ? JSON.parse(newActivity.rich_description) : null,
           image_url: newActivity.image_url || null
         }]);
 
@@ -133,6 +139,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
         day_date: '',
         time_slot: '',
         activity_description: '',
+        rich_description: '',
         image_url: ''
       });
 
@@ -149,7 +156,10 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
 
   const handleEditActivity = (activity: EventActivity) => {
     setEditingActivity(activity.id || '');
-    setEditActivityData({ ...activity });
+    setEditActivityData({
+      ...activity,
+      rich_description: activity.rich_description ? JSON.stringify(activity.rich_description) : ''
+    });
   };
 
   const handleSaveEdit = async () => {
@@ -162,6 +172,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
           day_date: editActivityData.day_date,
           time_slot: editActivityData.time_slot,
           activity_description: editActivityData.activity_description,
+          rich_description: editActivityData.rich_description ? JSON.parse(editActivityData.rich_description as string) : null,
           image_url: editActivityData.image_url || null,
           updated_at: new Date().toISOString()
         })
@@ -289,12 +300,21 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-1">Descripción de la Actividad *</label>
+              <label className="block text-sm font-medium mb-1">Descripción Breve *</label>
               <Textarea
-                placeholder="Describe la actividad..."
+                placeholder="Describe brevemente la actividad..."
                 value={newActivity.activity_description}
                 onChange={(e) => setNewActivity(prev => ({ ...prev, activity_description: e.target.value }))}
                 required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Descripción Detallada</label>
+              <RichTextEditor
+                value={newActivity.rich_description}
+                onChange={(value) => setNewActivity(prev => ({ ...prev, rich_description: value }))}
+                placeholder="Descripción detallada con formato..."
               />
             </div>
 
@@ -326,7 +346,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
                 <div className="flex items-center space-x-2">
                   <Calendar className="w-5 h-5 text-primary" />
                   <h3 className="text-lg font-semibold">
-                    {format(parseISO(day.day_date), 'EEEE, dd MMMM yyyy')}
+                    {format(parseISO(day.day_date), 'EEEE, dd MMMM yyyy', { locale: es })}
                   </h3>
                   <Badge variant="outline">
                     {day.activities.length} actividad{day.activities.length !== 1 ? 'es' : ''}
@@ -363,12 +383,23 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
                           </div>
                           
                           <div>
-                            <label className="block text-sm font-medium mb-1">Descripción *</label>
+                            <label className="block text-sm font-medium mb-1">Descripción Breve *</label>
                             <Textarea
                               value={editActivityData?.activity_description || ''}
                               onChange={(e) => setEditActivityData(prev => 
                                 prev ? { ...prev, activity_description: e.target.value } : null
                               )}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium mb-1">Descripción Detallada</label>
+                            <RichTextEditor
+                              value={editActivityData?.rich_description as string || ''}
+                              onChange={(value) => setEditActivityData(prev => 
+                                prev ? { ...prev, rich_description: value } : null
+                              )}
+                              placeholder="Descripción detallada con formato..."
                             />
                           </div>
 
@@ -403,13 +434,20 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
                                 <Clock className="w-4 h-4 text-gray-500" />
                                 <span className="font-medium">{activity.time_slot}</span>
                               </div>
-                              <p className="text-gray-700">{activity.activity_description}</p>
+                              <h4 className="font-medium mb-2">{activity.activity_description}</h4>
+                              
+                              {activity.rich_description && (
+                                <div className="mb-3">
+                                  <RichTextDisplay content={activity.rich_description} />
+                                </div>
+                              )}
+                              
                               {activity.image_url && (
                                 <div className="mt-3">
                                   <img 
                                     src={activity.image_url} 
                                     alt="Actividad" 
-                                    className="max-w-xs rounded-lg"
+                                    className="max-w-xs rounded-lg shadow-sm"
                                   />
                                 </div>
                               )}

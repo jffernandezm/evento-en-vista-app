@@ -20,6 +20,7 @@ export interface EventType {
   end_date?: string;
   distanceKm?: number;
   activitiesByDay?: EventDay[];
+  recurrence_type_id?: string;
 }
 
 export interface UserEvent {
@@ -41,6 +42,9 @@ export interface UserEvent {
   end_date?: string;
   created_at: string;
   updated_at: string;
+  recurrence_type_id?: string;
+  recurrence_days?: number[];
+  recurrence_end_date?: string;
 }
 
 export interface UserProfile {
@@ -88,6 +92,17 @@ export interface EventMedia {
   media_url: string;
   media_type: 'image' | 'video';
   display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecurrenceType {
+  id: string;
+  name: string;
+  description: string | null;
+  value: string;
+  days_interval: number | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }

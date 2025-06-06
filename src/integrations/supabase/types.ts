@@ -115,6 +115,39 @@ export type Database = {
         }
         Relationships: []
       }
+      recurrence_types: {
+        Row: {
+          created_at: string
+          days_interval: number | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          days_interval?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          days_interval?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       user_events: {
         Row: {
           address: string
@@ -132,7 +165,7 @@ export type Database = {
           price: string
           recurrence_days: number[] | null
           recurrence_end_date: string | null
-          recurrence_type: string | null
+          recurrence_type_id: string | null
           short_description: string
           start_date: string | null
           title: string
@@ -155,7 +188,7 @@ export type Database = {
           price?: string
           recurrence_days?: number[] | null
           recurrence_end_date?: string | null
-          recurrence_type?: string | null
+          recurrence_type_id?: string | null
           short_description: string
           start_date?: string | null
           title: string
@@ -178,7 +211,7 @@ export type Database = {
           price?: string
           recurrence_days?: number[] | null
           recurrence_end_date?: string | null
-          recurrence_type?: string | null
+          recurrence_type_id?: string | null
           short_description?: string
           start_date?: string | null
           title?: string
@@ -186,6 +219,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_events_recurrence_type_id_fkey"
+            columns: ["recurrence_type_id"]
+            isOneToOne: false
+            referencedRelation: "recurrence_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_events_user_id_fkey"
             columns: ["user_id"]

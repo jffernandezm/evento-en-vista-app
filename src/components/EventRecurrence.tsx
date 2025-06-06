@@ -6,24 +6,27 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Calendar, CalendarDays } from 'lucide-react';
 import { DatePicker } from '@/components/ui/date-picker';
+import { useRecurrenceTypes } from '@/hooks/useRecurrenceTypes';
 
 interface EventRecurrenceProps {
-  recurrenceType: string;
+  recurrenceTypeId: string | null;
   recurrenceDays: number[];
   recurrenceEndDate: Date | undefined;
-  onRecurrenceTypeChange: (type: string) => void;
+  onRecurrenceTypeIdChange: (typeId: string | null) => void;
   onRecurrenceDaysChange: (days: number[]) => void;
   onRecurrenceEndDateChange: (date: Date | undefined) => void;
 }
 
 const EventRecurrence: React.FC<EventRecurrenceProps> = ({
-  recurrenceType,
+  recurrenceTypeId,
   recurrenceDays,
   recurrenceEndDate,
-  onRecurrenceTypeChange,
+  onRecurrenceTypeIdChange,
   onRecurrenceDaysChange,
   onRecurrenceEndDateChange,
 }) => {
+  const { recurrenceTypes, loading } = useRecurrenceTypes();
+
   const weekdays = [
     { label: 'Domingo', value: 0 },
     { label: 'Lunes', value: 1 },
@@ -34,6 +37,9 @@ const EventRecurrence: React.FC<EventRecurrenceProps> = ({
     { label: 'Sábado', value: 6 },
   ];
 
+  const selectedRecurrenceType = recurrenceTypes.find(type => type.id === recurrenceTypeId);
+  const isWeeklyType = selectedRecurrenceType?.value === 'weekly';
+
   const handleDayToggle = (dayValue: number, checked: boolean) => {
     if (checked) {
       onRecurrenceDaysChange([...recurrenceDays, dayValue].sort());
@@ -41,6 +47,22 @@ const EventRecurrence: React.FC<EventRecurrenceProps> = ({
       onRecurrenceDaysChange(recurrenceDays.filter(d => d !== dayValue));
     }
   };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <CalendarDays className="w-5 h-5 mr-2" />
+            Periodicidad del Evento
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Cargando tipos de periodicidad...</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -55,19 +77,27 @@ const EventRecurrence: React.FC<EventRecurrenceProps> = ({
           <Label htmlFor="recurrence-type" className="block text-sm font-medium mb-2">
             Tipo de Repetición
           </Label>
-          <Select value={recurrenceType} onValueChange={onRecurrenceTypeChange}>
+          <Select 
+            value={recurrenceTypeId || ''} 
+            onValueChange={(value) => onRecurrenceTypeIdChange(value || null)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Selecciona tipo de repetición" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">No repetir</SelectItem>
-              <SelectItem value="weekly">Semanal</SelectItem>
-              <SelectItem value="monthly">Mensual</SelectItem>
+              {recurrenceTypes.map((type) => (
+                <SelectItem key={type.id} value={type.id}>
+                  {type.name}
+                  {type.description && (
+                    <span className="text-sm text-gray-500 ml-2">- {type.description}</span>
+                  )}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
-        {recurrenceType === 'weekly' && (
+        {isWeeklyType && (
           <div>
             <Label className="block text-sm font-medium mb-2">
               Días de la Semana
@@ -94,7 +124,7 @@ const EventRecurrence: React.FC<EventRecurrenceProps> = ({
           </div>
         )}
 
-        {recurrenceType !== 'none' && (
+        {selectedRecurrenceType && selectedRecurrenceType.value !== 'none' && (
           <div>
             <Label className="block text-sm font-medium mb-2">
               Fecha de Finalización
@@ -110,14 +140,16 @@ const EventRecurrence: React.FC<EventRecurrenceProps> = ({
           </div>
         )}
 
-        {recurrenceType !== 'none' && (
+        {selectedRecurrenceType && selectedRecurrenceType.value !== 'none' && (
           <div className="bg-blue-50 p-3 rounded-lg">
             <p className="text-sm text-blue-800">
               <Calendar className="w-4 h-4 inline mr-1" />
-              {recurrenceType === 'weekly' && recurrenceDays.length > 0 && (
+              {isWeeklyType && recurrenceDays.length > 0 && (
                 <>El evento se repetirá cada {weekdays.filter(d => recurrenceDays.includes(d.value)).map(d => d.label).join(', ')}</>
               )}
-              {recurrenceType === 'monthly' && <>El evento se repetirá mensualmente</>}
+              {selectedRecurrenceType.value !== 'weekly' && (
+                <>El evento se repetirá {selectedRecurrenceType.name.toLowerCase()}</>
+              )}
               {recurrenceEndDate && <> hasta el {recurrenceEndDate.toLocaleDateString()}</>}
             </p>
           </div>
