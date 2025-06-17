@@ -1,453 +1,449 @@
+
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, DollarSign, Phone, Save, Eye, EyeOff } from 'lucide-react';
-import DateRangePicker from '@/components/DateRangePicker';
-import ImageUploader from '@/components/ImageUploader';
-import EventActivitiesManager from '@/components/EventActivitiesManager';
-import EventMediaManager from '@/components/EventMediaManager';
-import GoogleMap from '@/components/GoogleMap';
-import RichTextEditor from '@/components/RichTextEditor';
-import EventRecurrence from '@/components/EventRecurrence';
-import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { toast } from 'sonner';
+import { ArrowLeft, Save, Eye, EyeOff } from 'lucide-react';
+import { LocationPicker } from '@/components/LocationPicker';
+import { ImageUploader } from '@/components/ImageUploader';
+import { EventMediaManager } from '@/components/EventMediaManager';
+import { EventActivitiesManager } from '@/components/EventActivitiesManager';
+import { EventRecurrence } from '@/components/EventRecurrence';
+import type { UserEvent, EventDay } from '@/types/event';
 
-const EditEventPage: React.FC = () => {
+const EditEventPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
-  const { isAdmin } = useUserProfile();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [canEdit, setCanEdit] = useState(false);
+  const queryClient = useQueryClient();
 
-  const [formData, setFormData] = useState({
-    title: '',
-    shortDescription: '',
-    fullDescription: '',
-    price: 'Gratis',
-    imageUrl: '',
-    address: '',
-    contactInfo: '',
-    category: 'upcoming',
-    latitude: null as number | null,
-    longitude: null as number | null,
-    is_published: true,
-  });
-
-  const [startDate, setStartDate] = useState<Date | undefined>();
-  const [endDate, setEndDate] = useState<Date | undefined>();
+  // Form state
+  const [title, setTitle] = useState('');
+  const [shortDescription, setShortDescription] = useState('');
+  const [fullDescription, setFullDescription] = useState('');
+  const [dates, setDates] = useState('');
+  const [price, setPrice] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [address, setAddress] = useState('');
+  const [contactInfo, setContactInfo] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [isPublished, setIsPublished] = useState(false);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [activitiesByDay, setActivitiesByDay] = useState<EventDay[]>([]);
   
-  // Estados para periodicidad
-  const [recurrenceType, setRecurrenceType] = useState('none');
+  // Recurrence state
+  const [recurrenceTypeId, setRecurrenceTypeId] = useState<string | null>(null);
   const [recurrenceDays, setRecurrenceDays] = useState<number[]>([]);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>();
 
-  useEffect(() => {
-    if (id && user) {
-      loadEvent();
-    }
-  }, [id, user, isAdmin]);
-
-  const loadEvent = async () => {
-    if (!id) return;
-
-    try {
+  // Fetch event data
+  const { data: event, isLoading } = useQuery({
+    queryKey: ['user-event', id],
+    queryFn: async () => {
+      if (!id) throw new Error('Event ID is required');
+      
       const { data, error } = await supabase
         .from('user_events')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) {
-        console.error('Error loading event:', error);
-        toast({
-          title: "Error",
-          description: "No se pudo cargar el evento",
-          variant: "destructive"
-        });
-        navigate('/');
-        return;
-      }
+      if (error) throw error;
+      return data as UserEvent;
+    },
+    enabled: !!id,
+  });
 
-      // Verificar que el usuario puede editar este evento
-      const userCanEdit = user && (data.user_id === user.id || isAdmin);
-
-      setCanEdit(userCanEdit || false);
-
-      if (!userCanEdit) {
-        toast({
-          title: "Sin permisos",
-          description: "No tienes permisos para editar este evento",
-          variant: "destructive"
-        });
-        navigate(`/event/${id}`);
-        return;
-      }
-
-      setFormData({
-        title: data.title,
-        shortDescription: data.short_description,
-        fullDescription: data.full_description || '',
-        price: data.price,
-        imageUrl: data.image_url || '',
-        address: data.address,
-        contactInfo: data.contact_info || '',
-        category: data.category || 'upcoming',
-        latitude: data.latitude || null,
-        longitude: data.longitude || null,
-        is_published: data.is_published ?? true,
-      });
-
-      // Cargar datos de periodicidad
-      setRecurrenceType(data.recurrence_type || 'none');
-      setRecurrenceDays(data.recurrence_days || []);
+  // Fetch event activities
+  const { data: activities = [] } = useQuery({
+    queryKey: ['event-activities', id],
+    queryFn: async () => {
+      if (!id) return [];
       
-      if (data.start_date) {
-        setStartDate(new Date(data.start_date));
+      const { data, error } = await supabase
+        .from('event_activities')
+        .select('*')
+        .eq('event_id', id)
+        .order('day_date', { ascending: true })
+        .order('time_slot', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  // Load form data when event is fetched
+  useEffect(() => {
+    if (event) {
+      setTitle(event.title);
+      setShortDescription(event.short_description);
+      setFullDescription(event.full_description || '');
+      setDates(event.dates);
+      setPrice(event.price);
+      setImageUrl(event.image_url || '');
+      setAddress(event.address);
+      setContactInfo(event.contact_info || '');
+      setLatitude(event.latitude || null);
+      setLongitude(event.longitude || null);
+      setIsPublished(event.is_published);
+      setStartDate(event.start_date || '');
+      setEndDate(event.end_date || '');
+      
+      // Load recurrence data
+      setRecurrenceTypeId(event.recurrence_type_id || null);
+      setRecurrenceDays(event.recurrence_days || []);
+      if (event.recurrence_end_date) {
+        setRecurrenceEndDate(new Date(event.recurrence_end_date));
       }
-      if (data.end_date) {
-        setEndDate(new Date(data.end_date));
-      }
-      if (data.recurrence_end_date) {
-        setRecurrenceEndDate(new Date(data.recurrence_end_date));
-      }
-
-    } catch (error) {
-      console.error('Error loading event:', error);
-      toast({
-        title: "Error",
-        description: "Error inesperado al cargar el evento",
-        variant: "destructive"
-      });
-      navigate('/');
-    } finally {
-      setInitialLoading(false);
     }
-  };
+  }, [event]);
 
-  const handleInputChange = (field: string, value: string | boolean | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleLocationChange = (lat: number, lng: number, address: string) => {
-    console.log('Location changed:', lat, lng, address);
-    setFormData(prev => ({
-      ...prev,
-      latitude: lat,
-      longitude: lng,
-      address: address
-    }));
-  };
-
-  const generateDatesString = () => {
-    if (!startDate) return '';
-    
-    if (endDate && startDate.getTime() !== endDate.getTime()) {
-      return `${format(startDate, 'dd/MM/yyyy')} - ${format(endDate, 'dd/MM/yyyy')}`;
+  // Group activities by day
+  useEffect(() => {
+    if (activities.length > 0) {
+      const groupedActivities = activities.reduce((acc, activity) => {
+        const dayDate = activity.day_date;
+        const existingDay = acc.find(day => day.day_date === dayDate);
+        
+        if (existingDay) {
+          existingDay.activities.push(activity);
+        } else {
+          acc.push({
+            day_date: dayDate,
+            activities: [activity]
+          });
+        }
+        
+        return acc;
+      }, [] as EventDay[]);
+      
+      setActivitiesByDay(groupedActivities);
     }
-    
-    return format(startDate, 'dd/MM/yyyy');
-  };
+  }, [activities]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !id) return;
-
-    if (!startDate) {
-      toast({
-        title: "Error",
-        description: "Debes seleccionar al menos la fecha de inicio",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validar días de recurrencia si es semanal
-    if (recurrenceType === 'weekly' && recurrenceDays.length === 0) {
-      toast({
-        title: "Error",
-        description: "Debes seleccionar al menos un día para eventos semanales",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const eventData = {
-        title: formData.title,
-        short_description: formData.shortDescription,
-        full_description: formData.fullDescription,
-        dates: generateDatesString(),
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate ? endDate.toISOString().split('T')[0] : startDate.toISOString().split('T')[0],
-        price: formData.price,
-        image_url: formData.imageUrl,
-        address: formData.address,
-        contact_info: formData.contactInfo,
-        category: formData.category,
-        updated_at: new Date().toISOString(),
-        latitude: formData.latitude,
-        longitude: formData.longitude,
-        is_published: formData.is_published,
-        recurrence_type: recurrenceType,
-        recurrence_days: recurrenceType === 'weekly' ? recurrenceDays : null,
-        recurrence_end_date: recurrenceEndDate ? recurrenceEndDate.toISOString().split('T')[0] : null,
-      };
-
-      const { error } = await supabase
+  const updateEventMutation = useMutation({
+    mutationFn: async (eventData: Partial<UserEvent>) => {
+      if (!id) throw new Error('Event ID is required');
+      
+      const { data, error } = await supabase
         .from('user_events')
-        .update(eventData)
-        .eq('id', id);
+        .update({
+          ...eventData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single();
 
-      if (error) {
-        console.error('Error updating event:', error);
-        toast({
-          title: "Error",
-          description: "No se pudo actualizar el evento",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Éxito",
-          description: "¡Evento actualizado exitosamente!"
-        });
-        navigate(`/event/${id}`);
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      toast({
-        title: "Error",
-        description: "Ocurrió un error inesperado",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Evento actualizado exitosamente');
+      queryClient.invalidateQueries({ queryKey: ['user-event', id] });
+      queryClient.invalidateQueries({ queryKey: ['user-events'] });
+    },
+    onError: (error) => {
+      console.error('Error updating event:', error);
+      toast.error('Error al actualizar el evento');
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!title.trim()) {
+      toast.error('El título es requerido');
+      return;
     }
+
+    if (!shortDescription.trim()) {
+      toast.error('La descripción corta es requerida');
+      return;
+    }
+
+    if (!address.trim()) {
+      toast.error('La dirección es requerida');
+      return;
+    }
+
+    const eventData: Partial<UserEvent> = {
+      title: title.trim(),
+      short_description: shortDescription.trim(),
+      full_description: fullDescription.trim(),
+      dates: dates.trim(),
+      price: price.trim(),
+      image_url: imageUrl.trim() || null,
+      address: address.trim(),
+      contact_info: contactInfo.trim() || null,
+      latitude,
+      longitude,
+      is_published: isPublished,
+      start_date: startDate || null,
+      end_date: endDate || null,
+      recurrence_type_id: recurrenceTypeId,
+      recurrence_days: recurrenceDays.length > 0 ? recurrenceDays : null,
+      recurrence_end_date: recurrenceEndDate ? recurrenceEndDate.toISOString() : null,
+    };
+
+    updateEventMutation.mutate(eventData);
   };
 
-  if (initialLoading) {
+  const handleLocationSelect = (lat: number, lng: number, selectedAddress: string) => {
+    setLatitude(lat);
+    setLongitude(lng);
+    setAddress(selectedAddress);
+  };
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <p className="text-xl">Cargando...</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="h-64 bg-gray-200 rounded mb-4"></div>
+            <div className="h-32 bg-gray-200 rounded"></div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (!canEdit) {
+  if (!event) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <h2 className="text-xl font-bold mb-2">Sin Permisos</h2>
-            <p className="text-gray-600 mb-4">No tienes permisos para editar este evento.</p>
-            <Button asChild>
-              <Link to={`/event/${id}`}>Volver al Evento</Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-2xl font-bold mb-4">Evento no encontrado</h1>
+          <Button onClick={() => navigate('/')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver al inicio
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-primary text-primary-foreground p-4 shadow-md">
-        <div className="container mx-auto flex items-center">
-          <Button asChild variant="ghost" size="icon" className="mr-4">
-            <Link to={`/event/${id}`}>
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-          </Button>
-          <h1 className="text-2xl font-bold">Editar Evento</h1>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/')}
+              className="mr-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver
+            </Button>
+            <h1 className="text-3xl font-bold">Editar Evento</h1>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {isPublished ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            <span className="text-sm">
+              {isPublished ? 'Publicado' : 'Borrador'}
+            </span>
+          </div>
         </div>
-      </header>
 
-      <main className="container mx-auto p-4 max-w-6xl">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Información del Evento</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      {formData.is_published ? (
-                        <Eye className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <EyeOff className="w-5 h-5 text-gray-400" />
-                      )}
-                      <span className="font-medium">
-                        {formData.is_published ? 'Evento Publicado' : 'Evento No Publicado'}
-                      </span>
-                    </div>
-                    <Switch
-                      checked={formData.is_published}
-                      onCheckedChange={(checked) => handleInputChange('is_published', checked)}
-                    />
-                  </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Información Básica</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="title">Título del Evento *</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Nombre del evento"
+                  required
+                />
+              </div>
 
-                  <div>
-                    <label htmlFor="title" className="block text-sm font-medium mb-1">
-                      Título del Evento *
-                    </label>
-                    <Input
-                      id="title"
-                      type="text"
-                      placeholder="Nombre del evento"
-                      value={formData.title}
-                      onChange={(e) => handleInputChange('title', e.target.value)}
-                      required
-                    />
-                  </div>
+              <div>
+                <Label htmlFor="short-description">Descripción Corta *</Label>
+                <Textarea
+                  id="short-description"
+                  value={shortDescription}
+                  onChange={(e) => setShortDescription(e.target.value)}
+                  placeholder="Una breve descripción del evento"
+                  rows={2}
+                  required
+                />
+              </div>
 
-                  <div>
-                    <label htmlFor="shortDescription" className="block text-sm font-medium mb-1">
-                      Descripción Corta *
-                    </label>
-                    <Input
-                      id="shortDescription"
-                      type="text"
-                      placeholder="Descripción breve del evento"
-                      value={formData.shortDescription}
-                      onChange={(e) => handleInputChange('shortDescription', e.target.value)}
-                      required
-                    />
-                  </div>
+              <div>
+                <Label htmlFor="full-description">Descripción Completa</Label>
+                <Textarea
+                  id="full-description"
+                  value={fullDescription}
+                  onChange={(e) => setFullDescription(e.target.value)}
+                  placeholder="Descripción detallada del evento"
+                  rows={4}
+                />
+              </div>
 
-                  <div>
-                    <label htmlFor="fullDescription" className="block text-sm font-medium mb-1">
-                      Descripción Completa
-                    </label>
-                    <RichTextEditor
-                      value={formData.fullDescription}
-                      onChange={(value) => handleInputChange('fullDescription', value)}
-                      placeholder="Descripción detallada del evento..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Fechas del Evento *
-                    </label>
-                    <DateRangePicker
-                      startDate={startDate}
-                      endDate={endDate}
-                      onStartDateChange={setStartDate}
-                      onEndDateChange={setEndDate}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="price" className="block text-sm font-medium mb-1">
-                      Precio
-                    </label>
-                    <div className="relative">
-                      <Input
-                        id="price"
-                        type="text"
-                        placeholder="ej: Gratis, $10.000 CLP"
-                        value={formData.price}
-                        onChange={(e) => handleInputChange('price', e.target.value)}
-                        className="pl-10"
-                      />
-                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="contactInfo" className="block text-sm font-medium mb-1">
-                      Información de Contacto
-                    </label>
-                    <div className="relative">
-                      <Input
-                        id="contactInfo"
-                        type="text"
-                        placeholder="Email, teléfono, etc."
-                        value={formData.contactInfo}
-                        onChange={(e) => handleInputChange('contactInfo', e.target.value)}
-                        className="pl-10"
-                      />
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </div>
-
-                  <ImageUploader
-                    imageUrl={formData.imageUrl}
-                    onImageChange={(url) => handleInputChange('imageUrl', url)}
-                    onMessage={(msg, isError) => toast({
-                      title: isError ? "Error" : "Éxito",
-                      description: msg,
-                      variant: isError ? "destructive" : "default"
-                    })}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="dates">Fechas</Label>
+                  <Input
+                    id="dates"
+                    value={dates}
+                    onChange={(e) => setDates(e.target.value)}
+                    placeholder="Ej: 15-20 de Marzo, 2024"
                   />
+                </div>
+                <div>
+                  <Label htmlFor="price">Precio</Label>
+                  <Input
+                    id="price"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="Ej: Gratis, $50, $20-$100"
+                  />
+                </div>
+              </div>
 
-                  <div>
-                    <label htmlFor="category" className="block text-sm font-medium mb-1">
-                      Categoría
-                    </label>
-                    <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una categoría" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="upcoming">Próximos</SelectItem>
-                        <SelectItem value="ongoing">En Curso</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="start-date">Fecha de Inicio</Label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="end-date">Fecha de Fin</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
 
-                  <div className="flex gap-4 pt-4">
-                    <Button type="submit" className="flex-1" disabled={loading}>
-                      <Save className="w-4 h-4 mr-2" />
-                      {loading ? 'Guardando...' : 'Guardar Cambios'}
-                    </Button>
-                    <Button type="button" variant="outline" asChild>
-                      <Link to={`/event/${id}`}>Cancelar</Link>
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
+              <div>
+                <Label htmlFor="contact-info">Información de Contacto</Label>
+                <Textarea
+                  id="contact-info"
+                  value={contactInfo}
+                  onChange={(e) => setContactInfo(e.target.value)}
+                  placeholder="Teléfono, email, redes sociales, etc."
+                  rows={2}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Image Upload */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Imagen Principal</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ImageUploader
+                currentImageUrl={imageUrl}
+                onImageUploaded={(url) => setImageUrl(url)}
+                onImageRemoved={() => setImageUrl('')}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Event Media */}
+          <EventMediaManager eventId={id!} />
+
+          {/* Location */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ubicación</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <LocationPicker
+                address={address}
+                latitude={latitude}
+                longitude={longitude}
+                onLocationSelect={handleLocationSelect}
+                onAddressChange={setAddress}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Event Recurrence */}
+          <EventRecurrence
+            recurrenceTypeId={recurrenceTypeId}
+            recurrenceDays={recurrenceDays}
+            recurrenceEndDate={recurrenceEndDate}
+            onRecurrenceTypeIdChange={setRecurrenceTypeId}
+            onRecurrenceDaysChange={setRecurrenceDays}
+            onRecurrenceEndDateChange={setRecurrenceEndDate}
+          />
+
+          {/* Event Activities */}
+          <EventActivitiesManager
+            eventId={id!}
+            activitiesByDay={activitiesByDay}
+            onActivitiesChange={setActivitiesByDay}
+          />
+
+          {/* Publish Options */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Opciones de Publicación</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is-published"
+                  checked={isPublished}
+                  onCheckedChange={setIsPublished}
+                />
+                <Label htmlFor="is-published">
+                  {isPublished ? 'Publicado (visible para todos)' : 'Borrador (solo visible para ti)'}
+                </Label>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Submit Button */}
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={updateEventMutation.isPending}
+              className="min-w-[120px]"
+            >
+              {updateEventMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Guardar Cambios
+                </>
+              )}
+            </Button>
           </div>
-
-          <div className="space-y-6">
-            <GoogleMap
-              address={formData.address}
-              latitude={formData.latitude || undefined}
-              longitude={formData.longitude || undefined}
-              title={formData.title}
-              onLocationChange={handleLocationChange}
-              editable={true}
-            />
-            
-            <EventRecurrence
-              recurrenceType={recurrenceType}
-              recurrenceDays={recurrenceDays}
-              recurrenceEndDate={recurrenceEndDate}
-              onRecurrenceTypeChange={setRecurrenceType}
-              onRecurrenceDaysChange={setRecurrenceDays}
-              onRecurrenceEndDateChange={setRecurrenceEndDate}
-            />
-            
-            <EventMediaManager eventId={id!} canEdit={canEdit} />
-            
-            <EventActivitiesManager eventId={id!} canEdit={canEdit} />
-          </div>
-        </div>
-      </main>
+        </form>
+      </div>
     </div>
   );
 };
