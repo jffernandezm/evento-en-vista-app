@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -360,15 +359,21 @@ const EditEventPage = () => {
             </CardHeader>
             <CardContent>
               <ImageUploader
-                currentImageUrl={imageUrl}
-                onImageUploaded={(url) => setImageUrl(url)}
-                onImageRemoved={() => setImageUrl('')}
+                imageUrl={imageUrl}
+                onImageChange={(url) => setImageUrl(url)}
+                onMessage={(msg, isError) => {
+                  if (isError) {
+                    toast.error(msg);
+                  } else {
+                    toast.success(msg);
+                  }
+                }}
               />
             </CardContent>
           </Card>
 
           {/* Event Media */}
-          <EventMediaManager eventId={id!} />
+          <EventMediaManager eventId={id!} canEdit={true} />
 
           {/* Location */}
           <Card>
@@ -378,10 +383,11 @@ const EditEventPage = () => {
             <CardContent>
               <LocationPicker
                 address={address}
-                latitude={latitude}
-                longitude={longitude}
-                onLocationSelect={handleLocationSelect}
                 onAddressChange={setAddress}
+                onLocationChange={(lat, lng) => {
+                  setLatitude(lat);
+                  setLongitude(lng);
+                }}
               />
             </CardContent>
           </Card>
@@ -399,8 +405,7 @@ const EditEventPage = () => {
           {/* Event Activities */}
           <EventActivitiesManager
             eventId={id!}
-            activitiesByDay={activitiesByDay}
-            onActivitiesChange={setActivitiesByDay}
+            canEdit={true}
           />
 
           {/* Publish Options */}
