@@ -11,11 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { ArrowLeft, Save, Eye, EyeOff } from 'lucide-react';
-import { LocationPicker } from '@/components/LocationPicker';
-import { ImageUploader } from '@/components/ImageUploader';
-import { EventMediaManager } from '@/components/EventMediaManager';
-import { EventActivitiesManager } from '@/components/EventActivitiesManager';
-import { EventRecurrence } from '@/components/EventRecurrence';
+import LocationPicker from '@/components/LocationPicker';
+import ImageUploader from '@/components/ImageUploader';
+import EventMediaManager from '@/components/EventMediaManager';
+import EventActivitiesManager from '@/components/EventActivitiesManager';
+import EventRecurrence from '@/components/EventRecurrence';
 import type { UserEvent, EventDay } from '@/types/event';
 
 const EditEventPage = () => {
