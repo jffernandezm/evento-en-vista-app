@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { MapPin, Search, AlertCircle } from 'lucide-react';
+import { MapPin, Search, AlertCircle, ExternalLink } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -72,7 +72,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
               console.error('Google Maps failed to load after timeout');
               setHasError(true);
             }
-          }, 15000);
+          }, 10000);
           return;
         }
 
@@ -99,13 +99,23 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
       }
     };
 
-    loadGoogleMaps();
+    // Usar un timeout para evitar cargar inmediatamente
+    const timer = setTimeout(() => {
+      loadGoogleMaps();
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     if (mapLoaded && mapRef.current && window.google?.maps && !map) {
       console.log('Initializing map...');
-      initializeMap();
+      try {
+        initializeMap();
+      } catch (error) {
+        console.error('Error in map initialization:', error);
+        setHasError(true);
+      }
     }
   }, [mapLoaded]);
 
@@ -269,6 +279,13 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
     }
   };
 
+  const openInGoogleMaps = () => {
+    const coords = (latitude && longitude) ? `${latitude},${longitude}` : '';
+    const query = coords || encodeURIComponent(address);
+    const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    window.open(url, '_blank');
+  };
+
   if (hasError) {
     return (
       <Card>
@@ -278,16 +295,42 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
             Ubicación
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex items-center justify-center p-8 bg-gray-100 rounded-lg">
             <div className="text-center">
               <AlertCircle className="w-8 h-8 mx-auto mb-2 text-red-400" />
-              <p className="text-gray-600">Error al cargar el mapa</p>
-              {address && (
-                <p className="text-sm text-gray-500 mt-1">{address}</p>
-              )}
+              <p className="text-gray-600 mb-2">Error al cargar el mapa</p>
+              <p className="text-sm text-gray-500 mb-4">La API de Google Maps no está disponible</p>
             </div>
           </div>
+          
+          {address && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-700">
+                <MapPin className="w-4 h-4 inline mr-1" />
+                Dirección del evento:
+              </p>
+              <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{address}</p>
+              <Button 
+                onClick={openInGoogleMaps}
+                variant="outline" 
+                size="sm"
+                className="w-full"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Abrir en Google Maps
+              </Button>
+            </div>
+          )}
+
+          {latitude && longitude && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-700">Coordenadas:</p>
+              <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                {latitude.toFixed(6)}, {longitude.toFixed(6)}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
@@ -349,10 +392,31 @@ const GoogleMap: React.FC<GoogleMapProps> = ({
         </div>
         
         {address && (
-          <p className="text-sm text-gray-600 mt-2">
-            <MapPin className="w-4 h-4 inline mr-1" />
-            {address}
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-700">
+              <MapPin className="w-4 h-4 inline mr-1" />
+              Dirección:
+            </p>
+            <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{address}</p>
+            <Button 
+              onClick={openInGoogleMaps}
+              variant="outline" 
+              size="sm"
+              className="w-full"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Ver en Google Maps
+            </Button>
+          </div>
+        )}
+
+        {latitude && longitude && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-700">Coordenadas:</p>
+            <p className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+              Lat: {latitude.toFixed(6)}, Lng: {longitude.toFixed(6)}
+            </p>
+          </div>
         )}
       </CardContent>
     </Card>
