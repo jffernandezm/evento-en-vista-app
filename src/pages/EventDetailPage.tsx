@@ -68,12 +68,21 @@ const EventDetailPage: React.FC = () => {
   const canEdit = user && event.user_id && (event.user_id === user.id || isAdmin);
   const isUserEvent = !!event.user_id;
 
+  // Asegurar que los textos sean cadenas válidas
+  const safeTitle = event.title || 'Sin título';
+  const safeDates = event.dates || 'Fechas no especificadas';
+  const safeDistance = event.distance || 'Ubicación no disponible';
+  const safePrice = event.price || 'Precio no especificado';
+  const safeDescription = event.fullDescription || 'Descripción no disponible';
+  const safeContactInfo = event.contactInfo || 'Información de contacto no disponible';
+  const safeAddress = event.address || 'Dirección no disponible';
+
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
       <div className="relative">
         <img 
           src={event.imageUrl} 
-          alt={event.title} 
+          alt={safeTitle} 
           className="w-full h-64 md:h-96 object-cover"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
@@ -101,21 +110,21 @@ const EventDetailPage: React.FC = () => {
       <div className="container mx-auto p-4 -mt-12">
         <Card className="shadow-xl">
           <CardHeader>
-            <CardTitle className="text-3xl font-bold text-primary">{event.title}</CardTitle>
+            <CardTitle className="text-3xl font-bold text-primary">{safeTitle}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div className="flex items-center p-3 bg-gray-100 rounded-lg">
                 <CalendarDays className="w-5 h-5 mr-3 text-primary" />
-                <span>{event.dates}</span>
+                <span>{safeDates}</span>
               </div>
               <div className="flex items-center p-3 bg-gray-100 rounded-lg">
                 <span className="w-5 h-5 mr-3 text-primary flex items-center justify-center text-xs">📍</span>
-                <span>{event.distance}</span>
+                <span>{safeDistance}</span>
               </div>
               <div className="flex items-center p-3 bg-gray-100 rounded-lg">
                 <DollarSign className="w-5 h-5 mr-3 text-primary" />
-                <span>{event.price}</span>
+                <span>{safePrice}</span>
               </div>
             </div>
 
@@ -124,7 +133,7 @@ const EventDetailPage: React.FC = () => {
                 <Info className="w-5 h-5 mr-2 text-primary"/>
                 Descripción
               </h2>
-              <p className="text-gray-700 leading-relaxed">{event.fullDescription}</p>
+              <p className="text-gray-700 leading-relaxed">{safeDescription}</p>
             </div>
 
             {isUserEvent && (
@@ -140,10 +149,10 @@ const EventDetailPage: React.FC = () => {
             />
             
             <GoogleMap 
-              address={event.address}
+              address={safeAddress}
               latitude={event.latitude}
               longitude={event.longitude}
-              title={event.title}
+              title={safeTitle}
             />
 
             <div>
@@ -151,7 +160,7 @@ const EventDetailPage: React.FC = () => {
                 <Phone className="w-5 h-5 mr-2 text-primary"/>
                 Contacto
               </h2>
-              <p className="text-gray-700">{event.contactInfo}</p>
+              <p className="text-gray-700">{safeContactInfo}</p>
             </div>
           </CardContent>
         </Card>

@@ -8,6 +8,11 @@ interface RichTextDisplayProps {
 
 const RichTextDisplay: React.FC<RichTextDisplayProps> = ({ content, className = '' }) => {
   const formatText = (text: string) => {
+    // Validar que el texto sea una cadena válida
+    if (!text || typeof text !== 'string') {
+      return '';
+    }
+    
     // Convertir **texto** a negrita
     let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     
@@ -20,10 +25,13 @@ const RichTextDisplay: React.FC<RichTextDisplayProps> = ({ content, className = 
     return formatted;
   };
 
+  // Validar que content sea una cadena antes de procesar
+  const safeContent = content || '';
+
   return (
     <div
       className={`prose prose-sm max-w-none ${className}`}
-      dangerouslySetInnerHTML={{ __html: formatText(content) }}
+      dangerouslySetInnerHTML={{ __html: formatText(safeContent) }}
     />
   );
 };
