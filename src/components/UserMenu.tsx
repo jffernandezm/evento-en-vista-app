@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useActivityLogger } from '@/hooks/useActivityLogger';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,13 +11,15 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { User, Plus, LogOut, LogIn } from 'lucide-react';
+import { User, Plus, LogOut, LogIn, Heart } from 'lucide-react';
 
 const UserMenu: React.FC = () => {
   const { user, signOut } = useAuth();
+  const { logActivity } = useActivityLogger();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSignOut = async () => {
+    await logActivity('logout');
     const { error } = await signOut();
     if (error) {
       console.error("Error signing out:", error);
@@ -29,7 +32,7 @@ const UserMenu: React.FC = () => {
 
   if (!user) {
     return (
-      <Button asChild variant="outline" size="sm" className="text-white border-white hover:bg-white hover:text-primary">
+      <Button asChild variant="outline" size="sm" className="text-black border-white hover:bg-white hover:text-primary">
         <Link to="/auth">
           <LogIn className="w-4 h-4 mr-2" />
           <span className="hidden sm:inline">Iniciar Sesión</span>
@@ -45,7 +48,7 @@ const UserMenu: React.FC = () => {
         <Button 
           variant="outline" 
           size="sm" 
-          className="text-white border-white hover:bg-white hover:text-primary relative"
+          className="text-black border-white hover:bg-white hover:text-primary relative"
         >
           <User className="w-4 h-4" />
           <span className="hidden sm:inline ml-2">Mi Cuenta</span>
@@ -57,6 +60,12 @@ const UserMenu: React.FC = () => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem asChild>
+          <Link to="/favorites" className="flex items-center w-full">
+            <Heart className="w-4 h-4 mr-2" />
+            Mis Favoritos
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link to="/create-event" className="flex items-center w-full">
             <Plus className="w-4 h-4 mr-2" />

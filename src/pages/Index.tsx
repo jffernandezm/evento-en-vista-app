@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import EventCard from '@/components/EventCard';
 import UserMenu from '@/components/UserMenu';
 import { useEvents } from '@/hooks/useEvents';
+import { useActivityLogger } from '@/hooks/useActivityLogger';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
@@ -11,6 +12,12 @@ const Index: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const { getAllEvents, loading } = useEvents();
+  const { logActivity } = useActivityLogger();
+
+  useEffect(() => {
+    // Log app open
+    logActivity('app_open');
+  }, [logActivity]);
 
   const allEvents = getAllEvents();
   

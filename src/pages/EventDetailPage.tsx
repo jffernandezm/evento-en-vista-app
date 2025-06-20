@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useEvents } from '@/hooks/useEvents';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useActivityLogger } from '@/hooks/useActivityLogger';
 import { EventType, EventDay } from '@/types/event';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CalendarDays, DollarSign, Info, Phone, Edit, MapPin } from 'lucide-react';
@@ -11,20 +12,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import GoogleMap from '@/components/GoogleMap';
 import EventActivitiesManager from '@/components/EventActivitiesManager';
 import EventMediaManager from '@/components/EventMediaManager';
+import FavoriteButton from '@/components/FavoriteButton';
 
 const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { isAdmin } = useUserProfile();
   const { getEventById } = useEvents();
+  const { logActivity } = useActivityLogger();
   const [event, setEvent] = useState<EventType | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (id) {
       loadEvent();
+      // Log event view
+      logActivity('event_view', id);
     }
-  }, [id]);
+  }, [id, logActivity]);
 
   const loadEvent = async () => {
     if (!id) return;
@@ -96,15 +101,16 @@ const EventDetailPage: React.FC = () => {
             </Link>
           </Button>
         </div>
-        {canEdit && (
-          <div className="absolute top-4 right-4">
+        <div className="absolute top-4 right-4 flex gap-2">
+          <FavoriteButton eventId={id!} size="md" />
+          {canEdit && (
             <Button asChild variant="outline" size="icon" className="rounded-full bg-white/70 hover:bg-white">
               <Link to={`/edit-event/${id}`}>
                 <Edit className="w-5 h-5" />
               </Link>
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="container mx-auto p-4 -mt-12">
@@ -120,7 +126,10 @@ const EventDetailPage: React.FC = () => {
               </div>
               <div className="flex items-center p-3 bg-gray-100 rounded-lg">
                 <MapPin className="w-5 h-5 mr-3 text-primary" />
-                <span>{safeDistance}</span>
+                <div className="flex flex-col">
+                  <span className="font-medium">{safeAddress}</span>
+                  <span className="text-xs text-gray-500">{safeDistance}</span>
+                </div>
               </div>
               <div className="flex items-center p-3 bg-gray-100 rounded-lg">
                 <DollarSign className="w-5 h-5 mr-3 text-primary" />
