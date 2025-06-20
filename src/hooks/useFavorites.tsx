@@ -12,6 +12,8 @@ export const useFavorites = () => {
   useEffect(() => {
     if (user) {
       fetchFavorites();
+    } else {
+      setFavorites([]);
     }
   }, [user]);
 
@@ -70,18 +72,31 @@ export const useFavorites = () => {
   };
 
   const getFavoriteEvents = async (): Promise<EventType[]> => {
-    if (!user || favorites.length === 0) return [];
+    if (!user) return [];
 
     try {
-      const { data, error } = await supabase
+      // Primero obtenemos los IDs de los favoritos
+      const { data: favoritesData, error: favoritesError } = await supabase
+        .from('user_favorites')
+        .select('event_id')
+        .eq('user_id', user.id);
+
+      if (favoritesError) throw favoritesError;
+
+      if (!favoritesData || favoritesData.length === 0) return [];
+
+      const favoriteIds = favoritesData.map(fav => fav.event_id);
+
+      // Luego obtenemos los eventos usando esos IDs
+      const { data: eventsData, error: eventsError } = await supabase
         .from('user_events')
         .select('*')
-        .in('id', favorites)
+        .in('id', favoriteIds)
         .eq('is_published', true);
 
-      if (error) throw error;
+      if (eventsError) throw eventsError;
 
-      return data.map(event => ({
+      return eventsData.map(event => ({
         id: event.id,
         title: event.title,
         shortDescription: event.short_description,

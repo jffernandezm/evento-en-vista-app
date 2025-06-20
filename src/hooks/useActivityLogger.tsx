@@ -48,6 +48,9 @@ export const useActivityLogger = () => {
     eventId?: string,
     additionalData?: any
   ) => {
+    // Only log activities for authenticated users
+    if (!user) return;
+    
     try {
       const deviceInfo = getDeviceInfo();
       const locationInfo = await getLocationInfo();
@@ -59,7 +62,7 @@ export const useActivityLogger = () => {
       }
 
       const logData = {
-        user_id: user?.id || null,
+        user_id: user.id,
         session_id: sessionId,
         activity_type: activityType,
         event_id: eventId || null,
