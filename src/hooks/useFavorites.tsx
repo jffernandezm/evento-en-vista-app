@@ -31,7 +31,9 @@ export const useFavorites = () => {
         return;
       }
 
-      setFavorites(data.map(fav => fav.event_id));
+      const favoriteIds = data.map(fav => fav.event_id);
+      setFavorites(favoriteIds);
+      console.log('Fetched favorite IDs:', favoriteIds);
     } catch (error) {
       console.error('Error fetching favorites:', error);
     }
@@ -75,7 +77,10 @@ export const useFavorites = () => {
     if (!user) return [];
 
     try {
-      // Primero obtenemos los IDs de los favoritos
+      // Asegurar que tenemos los favoritos actualizados
+      await fetchFavorites();
+
+      // Obtener los IDs de favoritos actuales
       const { data: favoritesData, error: favoritesError } = await supabase
         .from('user_favorites')
         .select('event_id')
@@ -83,9 +88,13 @@ export const useFavorites = () => {
 
       if (favoritesError) throw favoritesError;
 
-      if (!favoritesData || favoritesData.length === 0) return [];
+      if (!favoritesData || favoritesData.length === 0) {
+        console.log('No favorites found for user');
+        return [];
+      }
 
       const favoriteIds = favoritesData.map(fav => fav.event_id);
+      console.log('Favorite IDs to fetch:', favoriteIds);
 
       // Luego obtenemos los eventos usando esos IDs
       const { data: eventsData, error: eventsError } = await supabase
@@ -95,6 +104,8 @@ export const useFavorites = () => {
         .eq('is_published', true);
 
       if (eventsError) throw eventsError;
+
+      console.log('Found favorite events:', eventsData);
 
       return eventsData.map(event => ({
         id: event.id,

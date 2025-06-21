@@ -10,7 +10,7 @@ import EventCard from '@/components/EventCard';
 
 const FavoritesPage: React.FC = () => {
   const { user } = useAuth();
-  const { getFavoriteEvents, refetch } = useFavorites();
+  const { getFavoriteEvents } = useFavorites();
   const [favoriteEvents, setFavoriteEvents] = useState<EventType[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,9 +25,6 @@ const FavoritesPage: React.FC = () => {
   const loadFavorites = async () => {
     setLoading(true);
     try {
-      // Primero refrescamos la lista de favoritos
-      await refetch();
-      // Luego obtenemos los eventos favoritos
       const events = await getFavoriteEvents();
       setFavoriteEvents(events);
       console.log('Loaded favorite events:', events);
