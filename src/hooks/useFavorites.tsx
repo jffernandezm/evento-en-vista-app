@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { EventType } from '@/types/event';
@@ -73,7 +73,7 @@ export const useFavorites = () => {
     }
   };
 
-  const getFavoriteEvents = async (): Promise<EventType[]> => {
+  const getFavoriteEvents = useCallback(async (): Promise<EventType[]> => {
     if (!user) {
       console.log('No user found');
       return [];
@@ -82,7 +82,7 @@ export const useFavorites = () => {
     try {
       console.log('Starting to fetch favorite events for user:', user.id);
       
-      // Obtener los IDs de favoritos directamente de la base de datos
+      // Obtener los IDs de favoritos más recientes
       const { data: favoritesData, error: favoritesError } = await supabase
         .from('user_favorites')
         .select('event_id')
@@ -93,7 +93,7 @@ export const useFavorites = () => {
         return [];
       }
 
-      console.log('Raw favorites data:', favoritesData);
+      console.log('Fresh favorites data:', favoritesData);
 
       if (!favoritesData || favoritesData.length === 0) {
         console.log('No favorites found for user');
@@ -103,29 +103,27 @@ export const useFavorites = () => {
       const favoriteIds = favoritesData.map(fav => fav.event_id);
       console.log('Favorite IDs to fetch events for:', favoriteIds);
 
-      // Obtener todos los eventos favoritos (sin filtrar por is_published primero)
+      // Obtener todos los eventos favoritos
       const { data: eventsData, error: eventsError } = await supabase
         .from('user_events')
         .select('*')
-        .in('id', favoriteIds);
+        .in('id', favoriteIds)
+        .eq('is_published', true);
 
       if (eventsError) {
         console.error('Error fetching events:', eventsError);
         return [];
       }
 
-      console.log('All events found:', eventsData);
+      console.log('Published events found:', eventsData);
 
       if (!eventsData || eventsData.length === 0) {
-        console.log('No events found with those IDs');
+        console.log('No published events found with those IDs');
         return [];
       }
 
-      // Filtrar solo los eventos publicados y convertir al formato EventType
-      const publishedEvents = eventsData.filter(event => event.is_published);
-      console.log('Published events:', publishedEvents);
-
-      const events: EventType[] = publishedEvents.map(event => ({
+      // Convertir al formato EventType
+      const events: EventType[] = eventsData.map(event => ({
         id: event.id,
         title: event.title,
         shortDescription: event.short_description,
@@ -152,7 +150,7 @@ export const useFavorites = () => {
       console.error('Error in getFavoriteEvents:', error);
       return [];
     }
-  };
+  }, [user]);
 
   const isFavorite = (eventId: string) => favorites.includes(eventId);
 
