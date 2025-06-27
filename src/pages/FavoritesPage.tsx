@@ -15,25 +15,29 @@ const FavoritesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      loadFavorites();
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
+    const loadFavorites = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-  const loadFavorites = async () => {
-    setLoading(true);
-    try {
-      const events = await getFavoriteEvents();
-      setFavoriteEvents(events);
-      console.log('Loaded favorite events:', events);
-    } catch (error) {
-      console.error('Error loading favorites:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      console.log('Loading favorites for user:', user.id);
+      setLoading(true);
+      
+      try {
+        const events = await getFavoriteEvents();
+        console.log('Received events from getFavoriteEvents:', events);
+        setFavoriteEvents(events);
+      } catch (error) {
+        console.error('Error loading favorites:', error);
+        setFavoriteEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFavorites();
+  }, [user, getFavoriteEvents]);
 
   if (!user) {
     return (
@@ -71,11 +75,16 @@ const FavoritesPage: React.FC = () => {
             <p className="text-xl text-gray-600">Cargando favoritos...</p>
           </div>
         ) : favoriteEvents.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {favoriteEvents.map(event => (
-              <EventCard key={event.id} event={event} />
-            ))}
-          </div>
+          <>
+            <p className="text-gray-600 mb-4">
+              Tienes {favoriteEvents.length} evento{favoriteEvents.length !== 1 ? 's' : ''} favorito{favoriteEvents.length !== 1 ? 's' : ''}
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {favoriteEvents.map(event => (
+                <EventCard key={event.id} event={event} />
+              ))}
+            </div>
+          </>
         ) : (
           <div className="text-center py-10">
             <Heart className="w-16 h-16 mx-auto mb-4 text-gray-400" />

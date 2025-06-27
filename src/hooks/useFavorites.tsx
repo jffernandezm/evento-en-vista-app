@@ -74,10 +74,15 @@ export const useFavorites = () => {
   };
 
   const getFavoriteEvents = async (): Promise<EventType[]> => {
-    if (!user) return [];
+    if (!user) {
+      console.log('No user found');
+      return [];
+    }
 
     try {
-      // Obtener los IDs de favoritos actuales directamente
+      console.log('Starting to fetch favorite events for user:', user.id);
+      
+      // Obtener los IDs de favoritos directamente de la base de datos
       const { data: favoritesData, error: favoritesError } = await supabase
         .from('user_favorites')
         .select('event_id')
@@ -88,52 +93,46 @@ export const useFavorites = () => {
         return [];
       }
 
+      console.log('Raw favorites data:', favoritesData);
+
       if (!favoritesData || favoritesData.length === 0) {
         console.log('No favorites found for user');
         return [];
       }
 
       const favoriteIds = favoritesData.map(fav => fav.event_id);
-      console.log('Favorite IDs to fetch:', favoriteIds);
+      console.log('Favorite IDs to fetch events for:', favoriteIds);
 
-      // Buscar los eventos usando esos IDs - verificar que existan y estén publicados
+      // Obtener todos los eventos favoritos (sin filtrar por is_published primero)
       const { data: eventsData, error: eventsError } = await supabase
         .from('user_events')
         .select('*')
-        .in('id', favoriteIds)
-        .eq('is_published', true);
+        .in('id', favoriteIds);
 
       if (eventsError) {
         console.error('Error fetching events:', eventsError);
         return [];
       }
 
-      console.log('Found favorite events in database:', eventsData);
+      console.log('All events found:', eventsData);
 
-      // Si no se encuentran eventos, revisar si el problema es que no están publicados
       if (!eventsData || eventsData.length === 0) {
-        const { data: allEventsData, error: allEventsError } = await supabase
-          .from('user_events')
-          .select('*')
-          .in('id', favoriteIds);
-
-        if (allEventsError) {
-          console.error('Error fetching all events:', allEventsError);
-        } else {
-          console.log('All events with favorite IDs (including unpublished):', allEventsData);
-        }
+        console.log('No events found with those IDs');
         return [];
       }
 
-      // Convertir los datos a formato EventType
-      const events = eventsData.map(event => ({
+      // Filtrar solo los eventos publicados y convertir al formato EventType
+      const publishedEvents = eventsData.filter(event => event.is_published);
+      console.log('Published events:', publishedEvents);
+
+      const events: EventType[] = publishedEvents.map(event => ({
         id: event.id,
         title: event.title,
         shortDescription: event.short_description,
         fullDescription: event.full_description || '',
         dates: event.dates,
-        distance: 'Ubicación no disponible',
-        price: event.price,
+        distance: event.address || 'Ubicación no disponible',
+        price: event.price || 'Gratis',
         imageUrl: event.image_url || '/placeholder.svg',
         images: event.image_url ? [event.image_url] : [],
         address: event.address,
@@ -147,7 +146,7 @@ export const useFavorites = () => {
         end_date: event.end_date,
       }));
 
-      console.log('Converted favorite events:', events);
+      console.log('Final converted events:', events);
       return events;
     } catch (error) {
       console.error('Error in getFavoriteEvents:', error);
