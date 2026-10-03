@@ -9,12 +9,14 @@ import CreateEventPage from "./pages/CreateEventPage";
 import EditEventPage from "./pages/EditEventPage";
 import FavoritesPage from "./pages/FavoritesPage";
 import NotFound from "./pages/NotFound";
+import AuthHashHandler from "./components/AuthHashHandler";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
+      <AuthHashHandler />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/event/:id" element={<EventDetailPage />} />
