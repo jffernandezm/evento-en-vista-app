@@ -1,4 +1,4 @@
-
+/// <reference types="google.maps" />
 import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
