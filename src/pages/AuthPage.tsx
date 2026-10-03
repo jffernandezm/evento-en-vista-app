@@ -26,32 +26,39 @@ const AuthPage: React.FC = () => {
       if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) {
-          toast({
-            title: "Error de inicio de sesión",
-            description: error.message,
-            variant: "destructive",
-          });
+          const code = (error as any).code || '';
+          let description = error.message;
+          if (code === 'email_not_confirmed' || /not confirmed/i.test(error.message)) {
+            description = 'Debes confirmar tu correo antes de ingresar. Revisa tu bandeja de entrada (y spam) y haz clic en el enlace de confirmación.';
+          } else if (code === 'invalid_credentials' || /invalid login/i.test(error.message)) {
+            description = 'Email o contraseña incorrectos. Si te registraste recientemente, confirma primero tu correo.';
+          }
+          toast({ title: "No se pudo iniciar sesión", description, variant: "destructive" });
         } else {
-          toast({
-            title: "¡Bienvenido!",
-            description: "Has iniciado sesión exitosamente.",
-          });
+          toast({ title: "¡Bienvenido!", description: "Has iniciado sesión exitosamente." });
           navigate('/');
         }
       } else {
-        const { error } = await signUp(email, password, fullName);
+        const { data, error } = await signUp(email, password, fullName);
         if (error) {
+          toast({ title: "Error de registro", description: error.message, variant: "destructive" });
+        } else if (data?.user && (data.user.identities?.length ?? 0) === 0) {
           toast({
-            title: "Error de registro",
-            description: error.message,
+            title: "Este email ya está registrado",
+            description: "Inicia sesión con tu contraseña o usa otro correo.",
             variant: "destructive",
           });
+          setIsLogin(true);
+        } else if (data?.session) {
+          toast({ title: "¡Registro exitoso!", description: "Ya puedes crear eventos." });
+          navigate('/');
         } else {
           toast({
-            title: "¡Registro exitoso!",
-            description: "Tu cuenta ha sido creada. Ya puedes crear eventos.",
+            title: "Revisa tu correo",
+            description: `Te enviamos un enlace de confirmación a ${email}. Confírmalo y luego inicia sesión.`,
           });
-          navigate('/');
+          setIsLogin(true);
+          setPassword('');
         }
       }
     } catch (error) {
