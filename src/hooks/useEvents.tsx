@@ -55,30 +55,23 @@ export const useEvents = () => {
         };
       });
 
-      // Ordenar por proximidad y luego por fecha
+      // Ordenar: por proximidad (en tramos de 5 km) y luego por fecha más próxima
+      const today = new Date(new Date().toDateString()).getTime();
+      const dateKey = (e: EventType) => {
+        if (!e.start_date) return Number.MAX_SAFE_INTEGER;
+        const start = new Date(e.start_date + 'T00:00:00').getTime();
+        const end = e.end_date ? new Date(e.end_date + 'T00:00:00').getTime() : start;
+        if (end < today) return Number.MAX_SAFE_INTEGER - 1; // pasados al final
+        return Math.max(start, today); // en curso cuenta como hoy
+      };
+      const bucket = (e: EventType) =>
+        e.distanceKm !== undefined ? Math.floor(e.distanceKm / 5) : Number.MAX_SAFE_INTEGER;
       eventsWithDistance.sort((a, b) => {
-        // Primero por distancia (eventos con ubicación primero)
-        if (a.distanceKm !== undefined && b.distanceKm !== undefined) {
-          if (a.distanceKm !== b.distanceKm) {
-            return a.distanceKm - b.distanceKm;
-          }
-        } else if (a.distanceKm !== undefined) {
-          return -1;
-        } else if (b.distanceKm !== undefined) {
-          return 1;
-        }
-
-        // Luego por fecha de inicio (más próximos primero)
-        if (a.start_date && b.start_date) {
-          return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
-        } else if (a.start_date) {
-          return -1;
-        } else if (b.start_date) {
-          return 1;
-        }
-
-        // Finalmente por fecha de creación
-        return 0;
+        const ba = bucket(a), bb = bucket(b);
+        if (ba !== bb) return ba - bb;
+        const da = dateKey(a), db = dateKey(b);
+        if (da !== db) return da - db;
+        return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
       });
 
       return eventsWithDistance;
