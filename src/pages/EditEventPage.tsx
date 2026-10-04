@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { ArrowLeft, Save, Eye, EyeOff } from 'lucide-react';
-import LocationPicker from '@/components/LocationPicker';
+import GoogleMap from '@/components/GoogleMap';
 import ImageUploader from '@/components/ImageUploader';
 import EventMediaManager from '@/components/EventMediaManager';
 import EventActivitiesManager from '@/components/EventActivitiesManager';
@@ -381,13 +381,21 @@ const EditEventPage = () => {
               <CardTitle>Ubicación</CardTitle>
             </CardHeader>
             <CardContent>
-              <LocationPicker
+              <div className="mb-4">
+                <Label htmlFor="address">Dirección *</Label>
+                <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />
+              </div>
+              <GoogleMap
                 address={address}
-                onAddressChange={setAddress}
-                onLocationChange={(lat, lng) => {
+                latitude={latitude ?? undefined}
+                longitude={longitude ?? undefined}
+                title={title || 'Ubicación del evento'}
+                onLocationChange={(lat, lng, addr) => {
                   setLatitude(lat);
                   setLongitude(lng);
+                  if (addr) setAddress(addr);
                 }}
+                editable={true}
               />
             </CardContent>
           </Card>
