@@ -8,6 +8,7 @@ import AuthPage from "./pages/AuthPage";
 import CreateEventPage from "./pages/CreateEventPage";
 import EditEventPage from "./pages/EditEventPage";
 import FavoritesPage from "./pages/FavoritesPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import AuthHashHandler from "./components/AuthHashHandler";
 
@@ -24,6 +25,7 @@ const App = () => (
         <Route path="/create-event" element={<CreateEventPage />} />
         <Route path="/edit-event/:id" element={<EditEventPage />} />
         <Route path="/favorites" element={<FavoritesPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster />

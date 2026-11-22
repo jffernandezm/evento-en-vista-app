@@ -8,22 +8,57 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Mail, Lock, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+type AuthMode = 'login' | 'signup' | 'forgot';
+
 const AuthPage: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    const { error } = await resetPassword(email);
+    setLoading(false);
+
+    if (error) {
+      const tooMany = (error as any).status === 429 || /rate limit/i.test(error.message);
+      toast({
+        title: 'No se pudo enviar el enlace',
+        description: tooMany
+          ? 'Hiciste muchas solicitudes seguidas. Espera unos minutos e inténtalo de nuevo.'
+          : error.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    toast({
+      title: 'Revisa tu correo',
+      description: `Si ${email} está registrado, te enviamos un enlace para crear una nueva contraseña. Revisa también la carpeta de spam.`,
+    });
+    setMode('login');
+    setPassword('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (mode === 'forgot') {
+      await handleForgot(e);
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      if (isLogin) {
+      if (mode === 'login') {
         const { error } = await signIn(email, password);
         if (error) {
           const code = (error as any).code || '';
@@ -31,7 +66,7 @@ const AuthPage: React.FC = () => {
           if (code === 'email_not_confirmed' || /not confirmed/i.test(error.message)) {
             description = 'Debes confirmar tu correo antes de ingresar. Revisa tu bandeja de entrada (y spam) y haz clic en el enlace de confirmación.';
           } else if (code === 'invalid_credentials' || /invalid login/i.test(error.message)) {
-            description = 'Email o contraseña incorrectos. Si te registraste recientemente, confirma primero tu correo.';
+            description = 'Email o contraseña incorrectos. Si no la recuerdas, usa "¿Olvidaste tu contraseña?".';
           }
           toast({ title: "No se pudo iniciar sesión", description, variant: "destructive" });
         } else {
@@ -48,7 +83,7 @@ const AuthPage: React.FC = () => {
             description: "Inicia sesión con tu contraseña o usa otro correo.",
             variant: "destructive",
           });
-          setIsLogin(true);
+          setMode('login');
         } else if (data?.session) {
           toast({ title: "¡Registro exitoso!", description: "Ya puedes crear eventos." });
           navigate('/');
@@ -57,7 +92,7 @@ const AuthPage: React.FC = () => {
             title: "Revisa tu correo",
             description: `Te enviamos un enlace de confirmación a ${email}. Confírmalo y luego inicia sesión.`,
           });
-          setIsLogin(true);
+          setMode('login');
           setPassword('');
         }
       }
@@ -72,6 +107,9 @@ const AuthPage: React.FC = () => {
     }
   };
 
+  const title =
+    mode === 'login' ? 'Iniciar Sesión' : mode === 'signup' ? 'Registrarse' : 'Recuperar contraseña';
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -85,13 +123,16 @@ const AuthPage: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl text-center">
-              {isLogin ? 'Iniciar Sesión' : 'Registrarse'}
-            </CardTitle>
+            <CardTitle className="text-2xl text-center">{title}</CardTitle>
+            {mode === 'forgot' && (
+              <p className="text-sm text-muted-foreground text-center">
+                Te enviamos un enlace a tu correo para que elijas una nueva contraseña.
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
+              {mode === 'signup' && (
                 <div>
                   <label htmlFor="fullName" className="block text-sm font-medium mb-1">
                     Nombre Completo
@@ -103,7 +144,7 @@ const AuthPage: React.FC = () => {
                       placeholder="Tu nombre completo"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      required={!isLogin}
+                      required
                       className="pl-10"
                     />
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -129,40 +170,61 @@ const AuthPage: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-1">
-                  Contraseña
-                </label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="pl-10"
-                  />
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              {mode !== 'forgot' && (
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium mb-1">
+                    Contraseña
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      className="pl-10"
+                    />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <Button type="submit" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" disabled={loading}>
-                {loading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Registrarse')}
+              <Button
+                type="submit"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={loading}
+              >
+                {loading
+                  ? 'Procesando...'
+                  : mode === 'login'
+                    ? 'Iniciar Sesión'
+                    : mode === 'signup'
+                      ? 'Registrarse'
+                      : 'Enviar enlace'}
               </Button>
             </form>
 
-            <div className="mt-4 text-center">
+            <div className="mt-4 text-center space-y-2">
+              {mode === 'login' && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setMode('forgot')}
+                  className="text-sm text-primary hover:text-primary/80 hover:bg-primary/10"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Button>
+              )}
+
               <Button
                 variant="ghost"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-primary hover:text-primary/80 hover:bg-primary/10"
+                onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+                className="text-sm text-primary hover:text-primary/80 hover:bg-primary/10 block mx-auto"
               >
-                {isLogin
+                {mode === 'login'
                   ? '¿No tienes cuenta? Regístrate aquí'
-                  : '¿Ya tienes cuenta? Inicia sesión aquí'
-                }
+                  : '¿Ya tienes cuenta? Inicia sesión aquí'}
               </Button>
             </div>
           </CardContent>

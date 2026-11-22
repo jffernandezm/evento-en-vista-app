@@ -55,6 +55,14 @@ export const useAuth = () => {
     return { error };
   };
 
+  // Sends a "set a new password" link to the address; the link lands on /reset-password.
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    return { error };
+  };
+
   return {
     user,
     session,
@@ -62,5 +70,6 @@ export const useAuth = () => {
     signUp,
     signIn,
     signOut,
+    resetPassword,
   };
 };
