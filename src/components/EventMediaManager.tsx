@@ -293,7 +293,7 @@ const EventMediaManager: React.FC<EventMediaManagerProps> = ({
           )}
         </Carousel>
       ) : (
-        <p className="text-gray-500 text-center py-8">No hay archivos multimedia para este evento.</p>
+        <p className="text-muted-foreground text-center py-8">No hay archivos multimedia para este evento.</p>
       )}
     </div>
   );

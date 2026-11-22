@@ -89,7 +89,7 @@ const EventRecurrence: React.FC<EventRecurrenceProps> = ({
                 <SelectItem key={type.id} value={type.id}>
                   {type.name}
                   {type.description && (
-                    <span className="text-sm text-gray-500 ml-2">- {type.description}</span>
+                    <span className="text-sm text-muted-foreground ml-2">- {type.description}</span>
                   )}
                 </SelectItem>
               ))}
@@ -134,7 +134,7 @@ const EventRecurrence: React.FC<EventRecurrenceProps> = ({
               onDateChange={onRecurrenceEndDateChange}
               placeholder="Selecciona fecha final"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Opcional: Si no se especifica, el evento se repetirá indefinidamente
             </p>
           </div>

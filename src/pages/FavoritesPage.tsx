@@ -41,9 +41,9 @@ const FavoritesPage: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted flex items-center justify-center">
         <div className="text-center p-8">
-          <Heart className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+          <Heart className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
           <h1 className="text-2xl font-bold mb-4">Inicia sesión para ver tus favoritos</h1>
           <Button asChild>
             <Link to="/auth">Iniciar Sesión</Link>
@@ -54,10 +54,10 @@ const FavoritesPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted">
       <header className="bg-primary text-primary-foreground p-4 shadow-md sticky top-0 z-50">
         <div className="container mx-auto flex items-center">
-          <Button asChild variant="ghost" size="icon" className="mr-3 text-white hover:bg-white/20">
+          <Button asChild variant="ghost" size="icon" className="mr-3 text-primary-foreground hover:bg-accent/20">
             <Link to="/">
               <ArrowLeft className="w-5 h-5" />
             </Link>
@@ -73,11 +73,11 @@ const FavoritesPage: React.FC = () => {
         {loading ? (
           <div className="text-center py-10">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-xl text-gray-600">Cargando favoritos...</p>
+            <p className="text-xl text-muted-foreground">Cargando favoritos...</p>
           </div>
         ) : favoriteEvents.length > 0 ? (
           <>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Tienes {favoriteEvents.length} evento{favoriteEvents.length !== 1 ? 's' : ''} favorito{favoriteEvents.length !== 1 ? 's' : ''}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -88,9 +88,9 @@ const FavoritesPage: React.FC = () => {
           </>
         ) : (
           <div className="text-center py-10">
-            <Heart className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+            <Heart className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
             <h2 className="text-xl font-semibold mb-2">No tienes eventos favoritos</h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-muted-foreground mb-4">
               Explora eventos y marca los que te gusten como favoritos
             </p>
             <Button asChild>

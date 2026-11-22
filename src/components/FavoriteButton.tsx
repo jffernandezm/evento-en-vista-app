@@ -57,13 +57,13 @@ const FavoriteButton: React.FC<FavoriteButtonProps> = ({
       disabled={loading}
       variant="outline"
       size="icon"
-      className={`${sizeClasses[size]} rounded-full bg-white/90 hover:bg-white border-gray-200 shadow-md ${className}`}
+      className={`${sizeClasses[size]} rounded-full bg-card/90 hover:bg-accent border-border shadow-md ${className}`}
     >
       <Heart 
         className={`${iconSizes[size]} transition-colors ${
           isFavorite(eventId) 
             ? 'fill-red-500 text-red-500' 
-            : 'text-gray-400 hover:text-red-400'
+            : 'text-muted-foreground hover:text-red-400'
         }`}
       />
     </Button>

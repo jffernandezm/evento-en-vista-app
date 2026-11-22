@@ -90,7 +90,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
           <LocationMarker onLocationChange={onLocationChange} />
         </MapContainer>
       </div>
-      <p className="text-sm text-gray-500">Haz clic en el mapa para seleccionar la ubicación exacta</p>
+      <p className="text-sm text-muted-foreground">Haz clic en el mapa para seleccionar la ubicación exacta</p>
     </div>
   );
 };

@@ -95,7 +95,7 @@ const EventMap: React.FC<EventMapProps> = ({ address, latitude, longitude, title
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-gray-700 mb-4">{address}</p>
+        <p className="text-foreground mb-4">{address}</p>
         <div ref={mapContainer} className="h-64 w-full rounded-lg border" />
       </CardContent>
     </Card>

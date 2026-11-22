@@ -52,7 +52,7 @@ const EventDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-muted flex items-center justify-center">
         <p className="text-xl">Cargando evento...</p>
       </div>
     );
@@ -83,7 +83,7 @@ const EventDetailPage: React.FC = () => {
   const safeAddress = event.address || 'Dirección no disponible';
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16">
+    <div className="min-h-screen bg-muted pb-16">
       <div className="relative">
         <img 
           src={event.imageUrl} 
@@ -95,7 +95,7 @@ const EventDetailPage: React.FC = () => {
           }}
         />
         <div className="absolute top-4 left-4">
-          <Button asChild variant="outline" size="icon" className="rounded-full bg-white/70 hover:bg-white">
+          <Button asChild variant="outline" size="icon" className="rounded-full bg-card/70 hover:bg-accent">
             <Link to="/">
               <ArrowLeft className="w-5 h-5" />
             </Link>
@@ -104,7 +104,7 @@ const EventDetailPage: React.FC = () => {
         <div className="absolute top-4 right-4 flex gap-2">
           <FavoriteButton eventId={id!} size="md" />
           {canEdit && (
-            <Button asChild variant="outline" size="icon" className="rounded-full bg-white/70 hover:bg-white">
+            <Button asChild variant="outline" size="icon" className="rounded-full bg-card/70 hover:bg-accent">
               <Link to={`/edit-event/${id}`}>
                 <Edit className="w-5 h-5" />
               </Link>
@@ -120,18 +120,18 @@ const EventDetailPage: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="flex items-center p-3 bg-gray-100 rounded-lg">
+              <div className="flex items-center p-3 bg-muted rounded-lg">
                 <CalendarDays className="w-5 h-5 mr-3 text-primary" />
                 <span>{safeDates}</span>
               </div>
-              <div className="flex items-center p-3 bg-gray-100 rounded-lg">
+              <div className="flex items-center p-3 bg-muted rounded-lg">
                 <MapPin className="w-5 h-5 mr-3 text-primary" />
                 <div className="flex flex-col">
                   <span className="font-medium">{safeAddress}</span>
-                  <span className="text-xs text-gray-500">{safeDistance}</span>
+                  <span className="text-xs text-muted-foreground">{safeDistance}</span>
                 </div>
               </div>
-              <div className="flex items-center p-3 bg-gray-100 rounded-lg">
+              <div className="flex items-center p-3 bg-muted rounded-lg">
                 <DollarSign className="w-5 h-5 mr-3 text-primary" />
                 <span>{safePrice}</span>
               </div>
@@ -142,7 +142,7 @@ const EventDetailPage: React.FC = () => {
                 <Info className="w-5 h-5 mr-2 text-primary"/>
                 Descripción
               </h2>
-              <p className="text-gray-700 leading-relaxed">{safeDescription}</p>
+              <p className="text-foreground leading-relaxed">{safeDescription}</p>
             </div>
 
             {isUserEvent && (
@@ -169,7 +169,7 @@ const EventDetailPage: React.FC = () => {
                 <Phone className="w-5 h-5 mr-2 text-primary"/>
                 Contacto
               </h2>
-              <p className="text-gray-700">{safeContactInfo}</p>
+              <p className="text-foreground">{safeContactInfo}</p>
             </div>
           </CardContent>
         </Card>

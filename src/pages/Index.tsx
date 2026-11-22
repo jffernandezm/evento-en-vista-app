@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import EventCard from '@/components/EventCard';
 import UserMenu from '@/components/UserMenu';
+import ThemeToggle from "@/components/ThemeToggle";
 import { useEvents } from '@/hooks/useEvents';
 import { useActivityLogger } from '@/hooks/useActivityLogger';
 import { Input } from '@/components/ui/input';
@@ -29,11 +30,11 @@ const Index: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-background">
       <header className="bg-primary text-primary-foreground p-4 shadow-md sticky top-0 z-50">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-3xl font-bold">Panoramas</h1>
-          <UserMenu />
+          <div className="flex items-center gap-2"><ThemeToggle /><UserMenu /></div>
         </div>
       </header>
 
@@ -71,7 +72,7 @@ const Index: React.FC = () => {
 
         {loading ? (
           <div className="text-center py-10">
-            <p className="text-xl text-gray-600">Cargando eventos...</p>
+            <p className="text-xl text-muted-foreground">Cargando eventos...</p>
           </div>
         ) : filteredEvents.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -81,12 +82,12 @@ const Index: React.FC = () => {
           </div>
         ) : (
           <div className="text-center py-10">
-            <p className="text-xl text-gray-600">No se encontraron eventos con los filtros actuales.</p>
+            <p className="text-xl text-muted-foreground">No se encontraron eventos con los filtros actuales.</p>
           </div>
         )}
       </main>
       
-      <footer className="bg-gray-800 text-gray-300 p-4 text-center mt-8">
+      <footer className="bg-secondary text-muted-foreground p-4 text-center mt-8">
         <p>&copy; {new Date().getFullYear()} Panoramas App. Todos los derechos reservados.</p>
       </footer>
     </div>

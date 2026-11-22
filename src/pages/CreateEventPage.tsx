@@ -141,11 +141,11 @@ const CreateEventPage: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-muted flex items-center justify-center p-4">
         <Card>
           <CardContent className="p-6 text-center">
             <h2 className="text-xl font-bold mb-2">Acceso Requerido</h2>
-            <p className="text-gray-600 mb-4">Debes iniciar sesión para crear eventos.</p>
+            <p className="text-muted-foreground mb-4">Debes iniciar sesión para crear eventos.</p>
             <Button asChild>
               <Link to="/auth">Iniciar Sesión</Link>
             </Button>
@@ -156,7 +156,7 @@ const CreateEventPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-muted">
       <header className="bg-primary text-primary-foreground p-4 shadow-md">
         <div className="container mx-auto flex items-center">
           <Button asChild variant="ghost" size="icon" className="mr-4">

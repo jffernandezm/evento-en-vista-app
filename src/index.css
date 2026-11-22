@@ -38,6 +38,10 @@
 
     --radius: 0.5rem;
 
+    /* Marca: cambia aquí el color y el logo */
+    --brand: var(--primary);
+    --brand-logo: url("/favicon.ico");
+
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;

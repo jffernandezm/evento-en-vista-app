@@ -49,7 +49,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
 
   return (
     <div className="space-y-2">
-      <div className="flex gap-2 p-2 bg-gray-50 rounded-t-md border border-b-0">
+      <div className="flex gap-2 p-2 bg-muted rounded-t-md border border-b-0">
         <Button
           type="button"
           variant="ghost"
@@ -85,7 +85,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         placeholder={placeholder}
         className="min-h-[100px] rounded-t-none"
       />
-      <div className="text-xs text-gray-500 px-2">
+      <div className="text-xs text-muted-foreground px-2">
         Usa **texto** para negrita, *texto* para cursiva
       </div>
     </div>

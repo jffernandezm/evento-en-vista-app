@@ -32,7 +32,7 @@ const UserMenu: React.FC = () => {
 
   if (!user) {
     return (
-      <Button asChild variant="outline" size="sm" className="text-black border-white hover:bg-white hover:text-primary">
+      <Button asChild variant="outline" size="sm" className="text-foreground border-border hover:bg-accent hover:text-primary">
         <Link to="/auth">
           <LogIn className="w-4 h-4 mr-2" />
           <span className="hidden sm:inline">Iniciar Sesión</span>
@@ -48,12 +48,12 @@ const UserMenu: React.FC = () => {
         <Button 
           variant="outline" 
           size="sm" 
-          className="text-black border-white hover:bg-white hover:text-primary relative"
+          className="text-foreground border-border hover:bg-accent hover:text-primary relative"
         >
           <User className="w-4 h-4" />
           <span className="hidden sm:inline ml-2">Mi Cuenta</span>
           {isOpen && (
-            <span className="sm:hidden absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-50">
+            <span className="sm:hidden absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-foreground text-primary-foreground text-xs px-2 py-1 rounded whitespace-nowrap z-50">
               Mi Cuenta
             </span>
           )}

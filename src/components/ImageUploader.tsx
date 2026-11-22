@@ -83,9 +83,9 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ imageUrl, onImageChange, 
           </Button>
         </div>
       ) : (
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-          <ImageIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <p className="text-gray-600 mb-4">Sube una imagen para tu evento</p>
+        <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+          <ImageIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-muted-foreground mb-4">Sube una imagen para tu evento</p>
         </div>
       )}
 

@@ -22,16 +22,16 @@ const EventCard: React.FC<EventCardProps> = ({ event }) => {
         <CardTitle className="text-xl font-bold">{event.title}</CardTitle>
       </CardHeader>
       <CardContent className="flex-grow">
-        <p className="text-gray-700 text-sm mb-2">{event.shortDescription}</p>
-        <div className="flex items-center text-sm text-gray-600 mb-1">
+        <p className="text-foreground text-sm mb-2">{event.shortDescription}</p>
+        <div className="flex items-center text-sm text-muted-foreground mb-1">
           <CalendarDays className="w-4 h-4 mr-2 text-primary" />
           <span>{event.dates}</span>
         </div>
-        <div className="flex items-center text-sm text-gray-600 mb-1">
+        <div className="flex items-center text-sm text-muted-foreground mb-1">
           <MapPin className="w-4 h-4 mr-2 text-primary" />
           <span>{event.distance}</span>
         </div>
-        <div className="flex items-center text-sm text-gray-600">
+        <div className="flex items-center text-sm text-muted-foreground">
           <DollarSign className="w-4 h-4 mr-2 text-primary" />
           <span>{event.price}</span>
         </div>

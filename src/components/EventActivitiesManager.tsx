@@ -271,7 +271,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
       </CardHeader>
       <CardContent className="space-y-6">
         {canEdit && (
-          <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+          <div className="space-y-4 p-4 border rounded-lg bg-muted">
             <h4 className="font-medium flex items-center">
               <Plus className="w-4 h-4 mr-2" />
               Agregar Nueva Actividad
@@ -336,7 +336,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
         )}
 
         {activitiesByDay.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">
+          <p className="text-muted-foreground text-center py-8">
             No hay actividades programadas para este evento.
           </p>
         ) : (
@@ -355,7 +355,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
                 
                 <div className="space-y-3 ml-7">
                   {day.activities.map((activity) => (
-                    <div key={activity.id} className="border rounded-lg p-4 bg-white">
+                    <div key={activity.id} className="border rounded-lg p-4 bg-card">
                       {editingActivity === activity.id ? (
                         <div className="space-y-4">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -431,7 +431,7 @@ const EventActivitiesManager: React.FC<EventActivitiesManagerProps> = ({ eventId
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="flex items-center space-x-2 mb-2">
-                                <Clock className="w-4 h-4 text-gray-500" />
+                                <Clock className="w-4 h-4 text-muted-foreground" />
                                 <span className="font-medium">{activity.time_slot}</span>
                               </div>
                               <h4 className="font-medium mb-2">{activity.activity_description}</h4>
