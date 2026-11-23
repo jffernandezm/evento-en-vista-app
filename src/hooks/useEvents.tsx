@@ -3,11 +3,20 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { EventType, UserEvent } from '@/types/event';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { useSelectedComuna } from '@/hooks/useConsent';
+import { findComuna } from '@/lib/comunas';
 
 export const useEvents = () => {
   const [userEvents, setUserEvents] = useState<EventType[]>([]);
   const [loading, setLoading] = useState(true);
-  const { latitude, longitude, calculateDistance } = useGeolocation();
+  const geo = useGeolocation();
+  const { calculateDistance } = geo;
+  const { comuna } = useSelectedComuna();
+  const comunaPoint = findComuna(comuna);
+  // Usa la ubicación del dispositivo; si no hay, el centro de la comuna elegida.
+  const latitude = geo.latitude ?? comunaPoint?.lat ?? null;
+  const longitude = geo.longitude ?? comunaPoint?.lng ?? null;
+  const locationSource: 'device' | 'comuna' | 'none' = geo.latitude != null ? 'device' : comunaPoint ? 'comuna' : 'none';
 
   const fetchUserEvents = async () => {
     try {
@@ -23,13 +32,13 @@ export const useEvents = () => {
       }
 
       const eventsWithDistance = data.map((event: UserEvent): EventType => {
-        let distance = 'Ubicación no disponible';
+        let distance = locationSource === 'none' ? 'Ubicación no disponible' : 'Evento sin ubicación en el mapa';
         let distanceKm = Infinity;
         
         // Calcular distancia real si tenemos coordenadas del evento y del usuario
         if (event.latitude && event.longitude && latitude && longitude) {
           distanceKm = calculateDistance(latitude, longitude, event.latitude, event.longitude);
-          distance = `A ${distanceKm.toFixed(1)}km de ti`;
+          distance = (locationSource === 'comuna' ? `A ${distanceKm.toFixed(1)} km de ${comuna}` : `A ${distanceKm.toFixed(1)} km de ti`);
         }
 
         return {
@@ -94,12 +103,12 @@ export const useEvents = () => {
         return null;
       }
 
-      let distance = 'Ubicación no disponible';
+      let distance = locationSource === 'none' ? 'Ubicación no disponible' : 'Evento sin ubicación en el mapa';
       
       // Calcular distancia real si tenemos coordenadas
       if (data.latitude && data.longitude && latitude && longitude) {
         const distanceKm = calculateDistance(latitude, longitude, data.latitude, data.longitude);
-        distance = `A ${distanceKm.toFixed(1)}km de ti`;
+        distance = (locationSource === 'comuna' ? `A ${distanceKm.toFixed(1)} km de ${comuna}` : `A ${distanceKm.toFixed(1)} km de ti`);
       }
 
       return {
@@ -121,6 +130,7 @@ export const useEvents = () => {
         is_published: data.is_published,
         start_date: data.start_date,
         end_date: data.end_date,
+        distanceKm: data.latitude && data.longitude && latitude && longitude ? calculateDistance(latitude, longitude, data.latitude, data.longitude) : undefined,
       };
     } catch (error) {
       console.error('Error fetching event:', error);
@@ -146,6 +156,8 @@ export const useEvents = () => {
   return {
     userEvents,
     loading,
+    locationSource,
+    geoLoading: geo.loading,
     getAllEvents,
     getEventById,
     refetch: fetchUserEvents,

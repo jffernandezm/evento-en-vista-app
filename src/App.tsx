@@ -11,6 +11,8 @@ import FavoritesPage from "./pages/FavoritesPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import AuthHashHandler from "./components/AuthHashHandler";
+import ConsentBanner from "./components/ConsentBanner";
+import PrivacyPage from "./pages/PrivacyPage";
 
 const queryClient = new QueryClient();
 
@@ -26,8 +28,10 @@ const App = () => (
         <Route path="/edit-event/:id" element={<EditEventPage />} />
         <Route path="/favorites" element={<FavoritesPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/privacidad" element={<PrivacyPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <ConsentBanner />
       <Toaster />
     </BrowserRouter>
   </QueryClientProvider>

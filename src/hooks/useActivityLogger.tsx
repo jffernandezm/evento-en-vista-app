@@ -2,6 +2,8 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { getConsent } from '@/hooks/useConsent';
+import { nearestComuna } from '@/lib/comunas';
 
 type ActivityType = 'app_open' | 'event_view' | 'logout' | 'login' | 'favorite_add' | 'favorite_remove';
 
@@ -22,24 +24,16 @@ export const useActivityLogger = () => {
     };
   };
 
-  const getLocationInfo = (): Promise<any> => {
+  // Solo guarda la comuna (nunca coordenadas exactas).
+  const getLocationInfo = (): Promise<{ comuna: string | null; source: string }> => {
+    const chosen = localStorage.getItem('panoramas_comuna');
     return new Promise((resolve) => {
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            resolve({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracy: position.coords.accuracy
-            });
-          },
-          () => {
-            resolve({ error: 'Location access denied' });
-          }
-        );
-      } else {
-        resolve({ error: 'Geolocation not supported' });
-      }
+      if (!('geolocation' in navigator)) return resolve({ comuna: chosen, source: chosen ? 'selected' : 'none' });
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve({ comuna: nearestComuna(p.coords.latitude, p.coords.longitude), source: 'device' }),
+        () => resolve({ comuna: chosen, source: chosen ? 'selected' : 'none' }),
+        { timeout: 8000, maximumAge: 600000 }
+      );
     });
   };
 
@@ -50,6 +44,8 @@ export const useActivityLogger = () => {
   ) => {
     // Only log activities for authenticated users
     if (!user) return;
+    // Sin consentimiento no se guarda nada.
+    if (getConsent() !== 'accepted') return;
     
     try {
       const deviceInfo = getDeviceInfo();

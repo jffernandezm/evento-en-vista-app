@@ -13,6 +13,7 @@ import GoogleMap from '@/components/GoogleMap';
 import EventActivitiesManager from '@/components/EventActivitiesManager';
 import EventMediaManager from '@/components/EventMediaManager';
 import FavoriteButton from '@/components/FavoriteButton';
+import EventShareActions from '@/components/EventShareActions';
 
 const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -119,6 +120,7 @@ const EventDetailPage: React.FC = () => {
             <CardTitle className="text-3xl font-bold text-primary">{safeTitle}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            <EventShareActions event={event} />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div className="flex items-center p-3 bg-muted rounded-lg">
                 <CalendarDays className="w-5 h-5 mr-3 text-primary" />
